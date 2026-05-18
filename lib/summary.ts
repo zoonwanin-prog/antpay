@@ -21,6 +21,8 @@ export type SummaryDayRow = {
   moveTotal: number;            // โอนเงินรวม (โยก + Settlement + ซื้อ USDT THB)
   // ยอด wallet จาก go2pay
   mainPayoutBalance: number;
+  mainWalletBalance: number;
+  payoutWalletBalance: number;
   safeWalletBalance: number;    // USDT
   frozenBalance: number;
   // ต้นทุน / คืนทุน (จาก transfers)
@@ -302,6 +304,8 @@ export async function getMonthlySummary(monthInput?: string | null): Promise<Mon
       boWithdraw: round2(boWithdraw[date] || 0),
       bankWithdraw: round2(bankWithdraw[date] || 0),
       moveTotal: round2(moveTotal[date] || 0),
+      mainWalletBalance: round2(pickWalletSnapshot(latestBalances, date, "Main")),
+      payoutWalletBalance: round2(pickWalletSnapshot(latestBalances, date, "Payout")),
       mainPayoutBalance: round2(
         pickWalletSnapshot(latestBalances, date, "Main") + pickWalletSnapshot(latestBalances, date, "Payout")
       ),
