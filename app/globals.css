@@ -97,6 +97,166 @@ textarea {
   font: inherit;
 }
 
+.login-page {
+  align-items: center;
+  display: grid;
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.login-shell {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 440px);
+  margin: 0 auto;
+  max-width: 1050px;
+  width: 100%;
+}
+
+.login-copy {
+  align-content: center;
+  display: grid;
+  gap: 18px;
+  padding: 24px 0;
+}
+
+.login-logo {
+  align-items: center;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  border-radius: 18px;
+  box-shadow: var(--shadow-glow);
+  color: #FFFFFF;
+  display: inline-grid;
+  height: 64px;
+  justify-content: center;
+  width: 64px;
+}
+
+.login-kicker {
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.login-copy h2 {
+  font-size: 40px;
+  line-height: 1.12;
+  max-width: 560px;
+}
+
+.login-copy p:last-child {
+  color: var(--text-sec);
+  font-size: 16px;
+  max-width: 560px;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgba(20, 25, 40, 0.12);
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+}
+
+.login-brand {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.login-mark {
+  align-items: center;
+  background: var(--primary-light);
+  border: 1px solid rgba(249, 115, 22, 0.22);
+  border-radius: 16px;
+  color: var(--primary);
+  display: inline-grid;
+  height: 54px;
+  justify-content: center;
+  width: 54px;
+}
+
+.login-brand p {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.login-brand h1 {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.login-field {
+  display: grid;
+  gap: 8px;
+}
+
+.login-field > span {
+  color: var(--text-sec);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.login-field > div {
+  align-items: center;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 14px;
+}
+
+.login-field input {
+  border: 0;
+  color: var(--text);
+  flex: 1 1 auto;
+  font-weight: 700;
+  min-width: 0;
+  outline: 0;
+}
+
+.login-error {
+  background: rgba(230, 57, 86, 0.09);
+  border: 1px solid rgba(230, 57, 86, 0.18);
+  border-radius: 14px;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 12px 14px;
+}
+
+.login-button {
+  align-items: center;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  border: 0;
+  border-radius: 14px;
+  box-shadow: var(--shadow-glow);
+  color: #FFFFFF;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 10px;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 18px;
+}
+
+.login-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .shell {
   min-height: 100vh;
 }
@@ -206,6 +366,28 @@ textarea {
   height: 26px;
   justify-content: center;
   width: 26px;
+}
+
+.logout-button {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-sec);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  transition: transform 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.logout-button:hover {
+  border-color: rgba(249, 115, 22, 0.38);
+  color: var(--primary-dark);
+  transform: translateY(-1px);
 }
 
 .nav {
@@ -2853,6 +3035,19 @@ button:disabled,
 }
 
 @media (max-width: 1100px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+    max-width: 620px;
+  }
+
+  .login-copy {
+    padding: 0;
+  }
+
+  .login-copy h2 {
+    font-size: 32px;
+  }
+
   .dashboard-layout,
   .hero-card {
     grid-template-columns: 1fr;
@@ -2895,6 +3090,18 @@ button:disabled,
     --sidebar-w: 0px;
   }
 
+  .login-page {
+    padding: 18px;
+  }
+
+  .login-card {
+    padding: 22px;
+  }
+
+  .login-copy h2 {
+    font-size: 28px;
+  }
+
   .topbar {
     padding: 0 16px;
   }
@@ -2905,6 +3112,15 @@ button:disabled,
 
   .topbar-name {
     font-size: 18px;
+  }
+
+  .logout-button span {
+    display: none;
+  }
+
+  .logout-button {
+    min-height: 36px;
+    padding: 0 11px;
   }
 
   .nav {

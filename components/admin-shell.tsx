@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Landmark,
   ListFilter,
+  LogOut,
   Menu,
   PieChart,
   ReceiptText,
@@ -114,6 +115,12 @@ export function AdminShell({ active, title, description, children, actions }: Ad
             </span>
             <span>admin</span>
           </div>
+          <form action="/api/auth/logout" method="post">
+            <button className="logout-button" type="submit" aria-label="ออกจากระบบ">
+              <LogOut size={16} strokeWidth={2.2} />
+              <span>ออก</span>
+            </button>
+          </form>
         </div>
       </header>
       <input id="nav-toggle" className="nav-toggle" type="checkbox" aria-hidden="true" />
