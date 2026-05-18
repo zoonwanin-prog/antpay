@@ -1,9 +1,1 @@
-{
-  "crons": [
-    { "path": "/api/cron/statements", "schedule": "5 * * * *" },
-    { "path": "/api/cron/settlements", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/safewallet", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/tickets", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/wallet-snapshot", "schedule": "50 16 * * *" }
-  ]
-}
+{}
