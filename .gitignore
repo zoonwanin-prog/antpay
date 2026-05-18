@@ -1,0 +1,15 @@
+.DS_Store
+.env.local
+.env
+.next/
+node_modules/
+tmp/
+*.tsbuildinfo
+*.log
+*.xlsx
+*.xls
+*.csv
+*.png
+*.jpg
+*.jpeg
+*.webp
