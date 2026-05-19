@@ -40,8 +40,7 @@ export async function listStatementDaily(month: string): Promise<StatementDailyR
   return listStatementDailyFromStatements(month);
 }
 
-export async function listStatementDailyFromStatements(month: string): Promise<StatementDailyRow[]> {
-  const sourceRows = await fetchStatementRows({ month });
+function summarizeStatementRows(sourceRows: JsonRecord[]): StatementDailyRow[] {
   const map = new Map<string, StatementDailyRow & { lastSortTime: number }>();
   for (const source of sourceRows) {
     const row = normalizeBankStatementRow(source);
@@ -77,6 +76,23 @@ export async function listStatementDailyFromStatements(month: string): Promise<S
       ending_balance: round2(row.ending_balance)
     }))
     .sort((a, b) => `${a.date}|${a.bank}|${a.account_no}`.localeCompare(`${b.date}|${b.bank}|${b.account_no}`));
+}
+
+export async function listStatementDailyFromStatements(month: string): Promise<StatementDailyRow[]> {
+  return summarizeStatementRows(await fetchStatementRows({ month }));
+}
+
+export async function listStatementDailyByDate(date: string): Promise<StatementDailyRow[]> {
+  const rows = await selectAllPages<StatementDailyRow & JsonRecord>(
+    () => getSupabaseAdmin()
+      .from("bank_statement_daily")
+      .select("*")
+      .eq("date", date)
+      .order("bank", { ascending: true }),
+    "bank_statement_daily"
+  );
+  if (rows.length) return rows;
+  return summarizeStatementRows(await fetchStatementRows({ day: date }));
 }
 
 export async function listRowsByMonth<T extends JsonRecord>(table: string, dateColumn: string, month: string): Promise<T[]> {
