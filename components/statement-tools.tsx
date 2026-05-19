@@ -188,11 +188,18 @@ export function StatementTools({ month, mode = "all" }: { month: string; mode?: 
   async function search(event: FormEvent<HTMLFormElement>, type: UploadType) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const date = String(form.get("date") || "");
+    if (type === "statement" && !date) {
+      setStatementRows([]);
+      setStatementMeta({ total: 0, page: 1, page_size: 0, total_pages: 1, require_search: true });
+      setSearchMessage("กรุณาเลือกวันที่ก่อนค้นหา Statement");
+      return;
+    }
     const params = new URLSearchParams();
     params.set("type", type);
     params.set("q", String(form.get("q") || ""));
     params.set("month", String(form.get("month") || month));
-    params.set("date", String(form.get("date") || ""));
+    params.set("date", date);
     params.set("account_id", String(form.get("account_id") || ""));
     params.set("status", String(form.get("status") || ""));
     params.set("reporter", String(form.get("reporter") || ""));
@@ -217,7 +224,7 @@ export function StatementTools({ month, mode = "all" }: { month: string; mode?: 
         setBulkMeta(json);
       }
       const total = Number(json.total ?? (json.rows || []).length);
-      setSearchMessage(json.require_search ? "กรุณาใส่คำค้น เลือกเดือน วันที่ หรือบัญชีก่อนค้นหา" : `พบผลลัพธ์ ${total} รายการ`);
+      setSearchMessage(json.message || (json.require_search ? "กรุณาเลือกวันที่ก่อนค้นหา Statement" : `พบผลลัพธ์ ${total} รายการ`));
     } catch (error) {
       setSearchMessage(error instanceof Error ? error.message : "ค้นหาไม่สำเร็จ");
     } finally {
@@ -326,11 +333,11 @@ export function StatementTools({ month, mode = "all" }: { month: string; mode?: 
               <h3><FileSearch size={17} /> ค้นหาจาก Statement</h3>
               <div className="tool-alert">
                 <strong>ใช้ค้นหาประวัติฝากย้อนหลัง</strong>
-                <span>ค้นจาก description, เลขบัญชี, ยอดเงิน, reference หรือชื่อไฟล์ และเลือกเดือน/วันที่เพื่อจำกัดผลลัพธ์</span>
+                <span>ค้นจาก description, เลขบัญชี, ยอดเงิน, reference หรือชื่อไฟล์ โดยต้องเลือกวันที่ก่อนค้นหา</span>
               </div>
               <div className="tool-filter-grid statement-filter-grid">
                 <input name="q" placeholder="ค้น description / เลขบัญชี / ยอดเงิน / reference" />
-                <input type="date" name="date" aria-label="เลือกวันที่" />
+                <input type="date" name="date" aria-label="เลือกวันที่" required />
                 <input type="month" name="month" defaultValue={month} aria-label="เลือกเดือน" />
                 <select name="account_id" defaultValue="">
                   <option value="">ทุกบัญชี</option>
@@ -518,7 +525,7 @@ function ImportSummary({ result }: { result: ImportResult }) {
 
 function SearchCount({ meta, shown }: { meta: SearchMeta | null; shown: number }) {
   if (!meta) return null;
-  if (meta.require_search) return <div className="tool-empty">กรุณาใส่คำค้น เลือกเดือน วันที่ หรือบัญชีก่อนค้นหา</div>;
+  if (meta.require_search) return <div className="tool-empty">กรุณาเลือกวันที่ก่อนค้นหา Statement</div>;
   return <div className="tool-note">พบ {meta.total ?? shown} รายการ{meta.total > shown ? ` | แสดง ${shown} รายการแรก` : ""}</div>;
 }
 

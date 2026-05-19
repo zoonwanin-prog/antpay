@@ -155,14 +155,18 @@ async function followupMapFor(ids: string[]) {
 
 async function searchStatements(url: URL) {
   const q = normalizeText(clean(url.searchParams.get("q")));
-  const month = clean(url.searchParams.get("month"));
   const date = clean(url.searchParams.get("date"));
   const accountId = clean(url.searchParams.get("account_id"));
   const allRows = clean(url.searchParams.get("all")) === "1";
   const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 100), 10), 300);
 
-  if (!q && !month && !date && !accountId) {
-    return { rows: [], total: 0, require_search: true };
+  if (!date) {
+    return {
+      rows: [],
+      total: 0,
+      require_search: true,
+      message: "กรุณาเลือกวันที่ก่อนค้นหา Statement"
+    };
   }
 
   const supabase = getSupabaseAdmin();
@@ -175,8 +179,7 @@ async function searchStatements(url: URL) {
           .order("transaction_date", { ascending: false })
           .order("transaction_time", { ascending: false })
           .range(from, to);
-        if (date) query = query.eq("transaction_date", date);
-        else if (month) query = query.gte("transaction_date", `${month}-01`).lt("transaction_date", nextMonth(month));
+        query = query.eq("transaction_date", date);
         if (accountId) query = query.eq("account_id", accountId);
         return query;
       });
@@ -192,8 +195,7 @@ async function searchStatements(url: URL) {
       .order("transaction_date", { ascending: false })
       .order("transaction_time", { ascending: false })
       .range(0, limit - 1);
-    if (date) query = query.eq("transaction_date", date);
-    else if (month) query = query.gte("transaction_date", `${month}-01`).lt("transaction_date", nextMonth(month));
+    query = query.eq("transaction_date", date);
     if (accountId) query = query.eq("account_id", accountId);
     const { data, error, count } = await query;
     if (error) throw new Error(`statements: ${error.message}`);
@@ -211,8 +213,7 @@ async function searchStatements(url: URL) {
       .order("transaction_date", { ascending: false })
       .order("transaction_time", { ascending: false })
       .range(from, to);
-    if (date) query = query.eq("transaction_date", date);
-    else if (month) query = query.gte("transaction_date", `${month}-01`).lt("transaction_date", nextMonth(month));
+    query = query.eq("transaction_date", date);
     if (accountId) query = query.eq("account_id", accountId);
     return query;
   });
