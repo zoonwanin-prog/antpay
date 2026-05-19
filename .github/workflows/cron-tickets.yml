@@ -1,8 +1,6 @@
 name: Go2Pay Tickets Cron
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:

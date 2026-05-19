@@ -1,8 +1,6 @@
 name: Go2Pay 15 Minute Cron
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:

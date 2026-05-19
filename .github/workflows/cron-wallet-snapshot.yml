@@ -1,9 +1,6 @@
 name: Go2Pay Wallet Snapshot Cron
 
 on:
-  schedule:
-    # GitHub Actions schedules run in UTC. 16:50 UTC = 23:50 Asia/Bangkok.
-    - cron: "50 16 * * *"
   workflow_dispatch:
 
 jobs:

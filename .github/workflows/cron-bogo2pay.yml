@@ -1,9 +1,6 @@
 name: Go2Pay BoGo2pay Cron
 
 on:
-  schedule:
-    # GitHub Actions schedules run in UTC. 16:55 UTC = 23:55 Asia/Bangkok.
-    - cron: "55 16 * * *"
   workflow_dispatch:
 
 jobs:
