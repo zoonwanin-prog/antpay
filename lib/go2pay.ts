@@ -240,10 +240,17 @@ async function upsertWithCounts<Row extends JsonRecord>(
   table: string,
   rows: Row[],
   conflictColumn: keyof Row & string,
-  selectColumn = conflictColumn
+  selectColumn = conflictColumn,
+  options: { skipExisting?: boolean } = {}
 ) {
-  if (!rows.length) return { inserted: 0, updated: 0, rows: [] as JsonRecord[], insertedKeys: new Set<string>() };
-  const keys = rows.map((row) => String(row[conflictColumn] || "")).filter(Boolean);
+  if (!rows.length) return { inserted: 0, updated: 0, skippedExisting: 0, rows: [] as JsonRecord[], insertedKeys: new Set<string>() };
+  const uniqueRows = new Map<string, Row>();
+  for (const row of rows) {
+    const key = String(row[conflictColumn] || "");
+    if (key && !uniqueRows.has(key)) uniqueRows.set(key, row);
+  }
+  const rowsToCheck = Array.from(uniqueRows.values());
+  const keys = Array.from(uniqueRows.keys());
   const existing = new Set<string>();
   for (let index = 0; index < keys.length; index += 500) {
     const chunk = keys.slice(index, index + 500);
@@ -251,14 +258,25 @@ async function upsertWithCounts<Row extends JsonRecord>(
     if (error) throw new Error(`${table} existing lookup failed: ${error.message}`);
     for (const row of data || []) existing.add(String((row as JsonRecord)[selectColumn] || ""));
   }
-  const { data, error } = await getSupabaseAdmin()
-    .from(table)
-    .upsert(rows as never[], { onConflict: conflictColumn })
-    .select();
+  const insertRows = options.skipExisting ? rowsToCheck.filter((row) => !existing.has(String(row[conflictColumn] || ""))) : rowsToCheck;
+  if (!insertRows.length) {
+    return {
+      inserted: 0,
+      updated: options.skipExisting ? 0 : keys.filter((key) => existing.has(key)).length,
+      skippedExisting: keys.filter((key) => existing.has(key)).length,
+      rows: [] as JsonRecord[],
+      insertedKeys: new Set<string>()
+    };
+  }
+  const query = getSupabaseAdmin().from(table);
+  const { data, error } = options.skipExisting
+    ? await query.insert(insertRows as never[]).select()
+    : await query.upsert(insertRows as never[], { onConflict: conflictColumn }).select();
   if (error) throw new Error(error.message);
   return {
     inserted: keys.filter((key) => !existing.has(key)).length,
-    updated: keys.filter((key) => existing.has(key)).length,
+    updated: options.skipExisting ? 0 : keys.filter((key) => existing.has(key)).length,
+    skippedExisting: options.skipExisting ? keys.filter((key) => existing.has(key)).length : 0,
     rows: (data || []) as JsonRecord[],
     insertedKeys: new Set(keys.filter((key) => !existing.has(key)))
   };
@@ -343,7 +361,7 @@ export async function syncWalletSnapshot(date = bangkokDate()) {
 
 async function saveBogo2payRows(rows: JsonRecord[]) {
   let inserted = 0;
-  let updated = 0;
+  let skippedExisting = 0;
   const saved: JsonRecord[] = [];
   const supabase = getSupabaseAdmin();
 
@@ -360,15 +378,7 @@ async function saveBogo2payRows(rows: JsonRecord[]) {
 
     const existingId = String((existingRows?.[0] as JsonRecord | undefined)?.id || "");
     if (existingId) {
-      const { data, error } = await supabase
-        .from("bogo2pay_transactions")
-        .update(row)
-        .eq("id", existingId)
-        .select()
-        .single();
-      if (error) throw new Error(`bogo2pay update failed: ${error.message}`);
-      updated++;
-      saved.push((data || {}) as JsonRecord);
+      skippedExisting++;
     } else {
       const { data, error } = await supabase
         .from("bogo2pay_transactions")
@@ -381,7 +391,7 @@ async function saveBogo2payRows(rows: JsonRecord[]) {
     }
   }
 
-  return { inserted, updated, rows: saved };
+  return { inserted, updated: 0, skippedExisting, rows: saved };
 }
 
 export async function syncBogo2payReports(startDate: string, endDate: string) {
@@ -437,7 +447,16 @@ export async function syncBogo2payReports(startDate: string, endDate: string) {
   }
 
   const result = await saveBogo2payRows(rows);
-  return { inserted: result.inserted, updated: result.updated, scanned, skipped: skippedFuture + skippedEmpty, skippedFuture, skippedEmpty, rows: result.rows.length };
+  return {
+    inserted: result.inserted,
+    updated: result.updated,
+    scanned,
+    skipped: skippedFuture + skippedEmpty + result.skippedExisting,
+    skippedFuture,
+    skippedEmpty,
+    skippedExisting: result.skippedExisting,
+    rows: result.rows.length
+  };
 }
 
 function firstArray(value: unknown): Record<string, unknown>[] {
@@ -499,7 +518,7 @@ export async function syncCompletedSettlements(startDate: string, endDate: strin
     };
   });
   if (!rows.length) return { inserted: 0, updated: 0, scanned: items.length, skipped: 0 };
-  const result = await upsertWithCounts("crypto_transactions", rows, "source_ref");
+  const result = await upsertWithCounts("crypto_transactions", rows, "source_ref", "source_ref", { skipExisting: true });
   let notified = 0;
   let notifySkipped = 0;
   for (const row of result.rows.filter((saved) => result.insertedKeys.has(String(saved.source_ref || "")))) {
@@ -512,7 +531,7 @@ export async function syncCompletedSettlements(startDate: string, endDate: strin
       console.warn(`[settlements] telegram notify failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
-  return { inserted: result.inserted, updated: result.updated, scanned: items.length, notified, notifySkipped };
+  return { inserted: result.inserted, updated: result.updated, scanned: items.length, skipped: result.skippedExisting, notified, notifySkipped };
 }
 
 export async function syncSafeWalletApprovedDeposits(startDate: string, endDate: string) {
@@ -560,6 +579,13 @@ export async function syncSafeWalletApprovedDeposits(startDate: string, endDate:
     };
   });
   if (!rows.length) return { inserted: 0, updated: 0, scanned: rawItems.length, skipped: rawItems.length };
-  const result = await upsertWithCounts("safewallet_transactions", rows, "source_ref");
-  return { inserted: result.inserted, updated: result.updated, scanned: rawItems.length, skipped: rawItems.length - items.length, matched: items.length };
+  const result = await upsertWithCounts("safewallet_transactions", rows, "source_ref", "source_ref", { skipExisting: true });
+  return {
+    inserted: result.inserted,
+    updated: result.updated,
+    scanned: rawItems.length,
+    skipped: rawItems.length - items.length + result.skippedExisting,
+    skippedExisting: result.skippedExisting,
+    matched: items.length
+  };
 }
