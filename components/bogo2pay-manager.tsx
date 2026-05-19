@@ -182,9 +182,55 @@ export function Bogo2PayManager({
         </div>
       </section>
 
+      <BogoSummary rows={summaryRows} date={date} />
       <BogoTable rows={rows} date={date} page={page} pageCount={pageCount} totalRows={currentTotalRows} onEdit={startEdit} onDelete={deleteRow} />
     </div>
   );
+}
+
+function BogoSummary({ rows, date }: { rows: JsonRecord[]; date: string }) {
+  const totals = rows.reduce<{ depositCount: number; depositAmount: number; withdrawCount: number; withdrawAmount: number; feeTotal: number; netTotal: number }>(
+    (sum, row) => {
+      const amount = Number(row.actual_amount || 0);
+      const fee = Number(row.fee || 0);
+      const net = Number(row.net_amount || amount - fee);
+      sum.feeTotal += fee;
+      sum.netTotal += net;
+      if (row.type === "ฝาก") {
+        sum.depositCount += 1;
+        sum.depositAmount += amount;
+      } else if (row.type === "ถอน") {
+        sum.withdrawCount += 1;
+        sum.withdrawAmount += amount;
+      }
+      return sum;
+    },
+    { depositCount: 0, depositAmount: 0, withdrawCount: 0, withdrawAmount: 0, feeTotal: 0, netTotal: 0 }
+  );
+  const dayLabel = formatThaiDate(date);
+  return (
+    <section className="grid compact-card-grid transfer-summary-grid">
+      <div className="card metric-card compact-card transfer-summary-card tone-good">
+        <p className="metric">ฝาก BoGo2pay ({dayLabel})</p>
+        <p className="value">{money.format(totals.depositAmount)}</p>
+        <span className="metric-hint">{totals.depositCount} รายการ</span>
+      </div>
+      <div className="card metric-card compact-card transfer-summary-card tone-bad">
+        <p className="metric">ถอน BoGo2pay ({dayLabel})</p>
+        <p className="value">{money.format(totals.withdrawAmount)}</p>
+        <span className="metric-hint">{totals.withdrawCount} รายการ</span>
+      </div>
+      <div className="card metric-card compact-card transfer-summary-card tone-warn">
+        <p className="metric">ค่าธรรมเนียมรวม ({dayLabel})</p>
+        <p className="value">{money.format(totals.feeTotal)}</p>
+      </div>
+    </section>
+  );
+}
+
+function formatThaiDate(value: string) {
+  if (!value || value.length < 10) return value;
+  return `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}`;
 }
 
 function updateScopedRows(current: JsonRecord[], nextRow: JsonRecord, editingId: string, keep: boolean) {
@@ -217,7 +263,7 @@ function StatusMessage({ status, message }: { status: "" | "ok" | "err"; message
 function BogoTable({ rows, date, page, pageCount, totalRows, onEdit, onDelete }: { rows: JsonRecord[]; date: string; page: number; pageCount: number; totalRows: number; onEdit: (row: JsonRecord) => void; onDelete: (row: JsonRecord) => void }) {
   return (
     <section className="panel data-list-panel is-stack">
-      <div className="panel-header"><div><h2>รายการ BoGo2pay</h2><p>รายการของวันที่เลือก เรียงจากล่าสุดไปเก่า</p></div></div>
+      <div className="panel-header"><div><h2>รายการ BoGo2pay</h2><p>รายการทั้งหมด เรียงจากล่าสุดไปเก่า (สรุปยอดด้านบนนับเฉพาะวันที่เลือก)</p></div></div>
       <div className="table-wrap">
         <table>
           <thead>
@@ -235,7 +281,7 @@ function BogoTable({ rows, date, page, pageCount, totalRows, onEdit, onDelete }:
           </tbody>
         </table>
       </div>
-      {pageCount > 1 ? <TablePagination basePath="/bogo2pay" date={date} page={page} pageCount={pageCount} totalRows={totalRows} /> : null}
+      <TablePagination basePath="/bogo2pay" date={date} page={page} pageCount={pageCount} totalRows={totalRows} />
     </section>
   );
 }

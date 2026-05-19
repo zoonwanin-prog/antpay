@@ -83,14 +83,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const day = summary.auditDay;
   const daily = summary.summaryDay;
   const crypto = summary.cryptoDay;
-  const feeProfit = daily?.feeProfit || 0;
-  const safeWalletFee = daily?.feeCost || summary.safeWallet.fee || 0;
+  // ใช้ ?? เพื่อให้ 0 จริงไม่ถูก fallback ไปทับ
+  const feeProfit = daily?.feeProfit ?? 0;
+  const safeWalletFee = daily?.feeCost ?? summary.safeWallet.fee ?? 0;
   const totalProfit = feeProfit + safeWalletFee;
-  const safeWalletAmount = summary.safeWallet.amount || 0;
-  const safeWalletNet = summary.safeWallet.net || safeWalletAmount - safeWalletFee;
-  const mainWallet = daily?.mainWalletBalance || 0;
-  const payoutWallet = daily?.payoutWalletBalance || 0;
+  const safeWalletAmount = summary.safeWallet.amount ?? 0;
+  const safeWalletNet = summary.safeWallet.net ?? (safeWalletAmount - safeWalletFee);
+  const mainWallet = daily?.mainWalletBalance ?? 0;
+  const payoutWallet = daily?.payoutWalletBalance ?? 0;
   const systemBalance = mainWallet + payoutWallet;
+  // เงินในบัญชี → ดึงจาก balances ก่อน ถ้าไม่มี fallback ไป audit (ที่ก็ดึงจาก balances)
+  const accountBalance = daily?.accountBalance ?? day?.actualBalance ?? 0;
+  const boDepositToday = daily?.boDeposit ?? day?.boDeposit ?? 0;
+  const boWithdrawToday = daily?.boWithdraw ?? day?.boWithdraw ?? 0;
+  const bankDepositToday = daily?.bankDeposit ?? day?.bankDeposit ?? 0;
+  const bankWithdrawToday = daily?.bankWithdraw ?? day?.bankWithdraw ?? 0;
+  const expenseToday = daily?.expense ?? day?.sheetExpense ?? 0;
+  const transferOnlyToday = day?.transferOnly ?? 0;
+  const settlementToday = day?.settlement ?? 0;
+  const buyUSDTthbToday = crypto?.buyThb ?? day?.buyUSDTthb ?? 0;
+  const frozenBalance = daily?.frozenBalance ?? 0;
 
   return (
     <AdminShell active="dashboard" title="Dashboard ภาพรวม" description="daily-dashboard">
@@ -118,8 +130,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <section className="daily-section">
         <SectionTitle icon={<WalletMinimal size={17} />}>สรุปยอดคงเหลือ</SectionTitle>
         <div className="daily-grid cols-4">
-          <DashboardCard label="เงินในบัญชี" value={money.format(daily?.accountBalance || day?.actualBalance || 0)} tone="blue" />
-          <DashboardCard label="เงินในระบบ" value={money.format(systemBalance)} tone="purple" hint={`Frozen ${money.format(daily?.frozenBalance || 0)}`} />
+          <DashboardCard label="เงินในบัญชี" value={money.format(accountBalance)} tone="blue" />
+          <DashboardCard label="เงินในระบบ" value={money.format(systemBalance)} tone="purple" hint={`Frozen ${money.format(frozenBalance)}`} />
           <DashboardCard label="MAIN WALLET" value={money.format(mainWallet)} tone="green" />
           <DashboardCard label="PAYOUT WALLET" value={money.format(payoutWallet)} tone="orange" />
         </div>
@@ -128,20 +140,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <section className="daily-section">
         <SectionTitle icon={<Landmark size={17} />}>ฝาก ถอน และรายจ่าย</SectionTitle>
         <div className="daily-grid cols-5">
-          <DashboardCard label="ฝาก GO2PAY วันนี้" value={money.format(daily?.boDeposit || day?.boDeposit || 0)} tone="green" />
-          <DashboardCard label="ถอน GO2PAY วันนี้" value={money.format(daily?.boWithdraw || day?.boWithdraw || 0)} tone="red" />
-          <DashboardCard label="ฝากธนาคารวันนี้" value={money.format(daily?.bankDeposit || day?.bankDeposit || 0)} tone="green" />
-          <DashboardCard label="ถอนธนาคารวันนี้" value={money.format(daily?.bankWithdraw || day?.bankWithdraw || 0)} tone="red" />
-          <DashboardCard label="รายจ่ายวันนี้" value={money.format(daily?.expense || day?.sheetExpense || 0)} tone="red" />
+          <DashboardCard label="ฝาก GO2PAY วันนี้" value={money.format(boDepositToday)} tone="green" />
+          <DashboardCard label="ถอน GO2PAY วันนี้" value={money.format(boWithdrawToday)} tone="red" />
+          <DashboardCard label="ฝากธนาคารวันนี้" value={money.format(bankDepositToday)} tone="green" />
+          <DashboardCard label="ถอนธนาคารวันนี้" value={money.format(bankWithdrawToday)} tone="red" />
+          <DashboardCard label="รายจ่ายวันนี้" value={money.format(expenseToday)} tone="red" />
         </div>
       </section>
 
       <section className="daily-section">
         <SectionTitle icon={<Banknote size={17} />}>ยอดเคลื่อนไหว</SectionTitle>
         <div className="daily-grid cols-4">
-          <DashboardCard label="โยกเงิน" value={money.format(day?.transferOnly || 0)} tone="blue" />
-          <DashboardCard label="โอน SETTLEMENT" value={money.format(day?.settlement || 0)} tone="purple" />
-          <DashboardCard label="ซื้อ USDT (บาท)" value={money.format(crypto?.buyThb || day?.buyUSDTthb || 0)} tone="orange" />
+          <DashboardCard label="โยกเงิน" value={money.format(transferOnlyToday)} tone="blue" />
+          <DashboardCard label="โอน SETTLEMENT" value={money.format(settlementToday)} tone="purple" />
+          <DashboardCard label="ซื้อ USDT (บาท)" value={money.format(buyUSDTthbToday)} tone="orange" />
           <DashboardCard label="SAFEWALLET AMOUNT" value={money.format(safeWalletAmount)} tone="purple" />
         </div>
       </section>
@@ -158,10 +170,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <section className="daily-section">
         <SectionTitle icon={<Bitcoin size={17} />}>สรุปคริปโต USDT</SectionTitle>
         <div className="daily-grid cols-4">
-          <DashboardCard label="ซื้อ USDT" value={usdt.format(crypto?.buyUsdt || 0)} tone="green" hint={`จำนวนบาท ${money.format(crypto?.buyThb || 0)}`} />
-          <DashboardCard label="ถอน USDT" value={usdt.format(crypto?.withdrawUsdt || 0)} tone="red" hint={`จำนวนบาท ${money.format(crypto?.withdrawThb || 0)}`} />
-          <DashboardCard label="โอน USDT" value={usdt.format(crypto?.transferUsdt || 0)} tone="blue" hint={`จำนวนบาท ${money.format(crypto?.transferThb || 0)}`} />
-          <DashboardCard label="คงเหลือ USDT" value={usdt.format(crypto?.cumulativeUsdt || 0)} tone="purple" hint={`จำนวนบาท ${money.format(crypto?.cumulativeThb || 0)}`} />
+          <DashboardCard label="ซื้อ USDT" value={usdt.format(crypto?.buyUsdt ?? 0)} tone="green" hint={`จำนวนบาท ${money.format(crypto?.buyThb ?? 0)}`} />
+          <DashboardCard label="ถอน USDT" value={usdt.format(crypto?.withdrawUsdt ?? 0)} tone="red" hint={`จำนวนบาท ${money.format(crypto?.withdrawThb ?? 0)}`} />
+          <DashboardCard label="โอน USDT" value={usdt.format(crypto?.transferUsdt ?? 0)} tone="blue" hint={`จำนวนบาท ${money.format(crypto?.transferThb ?? 0)}`} />
+          <DashboardCard label="คงเหลือ USDT" value={usdt.format(crypto?.cumulativeUsdt ?? 0)} tone="purple" hint={`จำนวนบาท ${money.format(crypto?.cumulativeThb ?? 0)}`} />
         </div>
       </section>
 

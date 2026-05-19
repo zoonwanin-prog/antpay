@@ -15,6 +15,8 @@ function ddmmyyyy(date: string) {
 }
 
 function hasDailyMovement(row: Awaited<ReturnType<typeof getMonthlySummary>>["rows"][number]) {
+  // "มีข้อมูลในวันนั้น" = มีรายการเงินไหลจริง (ฝาก/ถอน/ค่าธรรมเนียม/โอน/ทุน/รายจ่าย)
+  // ตั้งใจไม่นับ wallet snapshot/account balance เพราะ cron อาจ snapshot ทุกวัน ทำให้ตารางรก
   return [
     row.feeProfit,
     row.feeCost,

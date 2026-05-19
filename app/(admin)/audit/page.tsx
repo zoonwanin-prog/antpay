@@ -127,21 +127,21 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           label="ธนาคาร"
           value={money.format(dayRow.diffBank)}
           tone={Math.abs(dayRow.diffBank) > 1 ? "bad" : "good"}
-          hint="ปิดยอดไม่ตรง"
+          hint={Math.abs(dayRow.diffBank) > 1 ? "ปิดยอดไม่ตรง" : "ปิดตรง"}
           icon={<Building2 size={18} />}
         />
         <MetricCard
           label="ฝาก"
           value={money.format(dayRow.diffDeposit)}
           tone={Math.abs(dayRow.diffDeposit) > 1 ? "warn" : "good"}
-          hint={dayRow.diffDeposit === 0 ? "ฝากปกติ" : "ตรวจฝาก BO"}
+          hint={Math.abs(dayRow.diffDeposit) < 1 ? "ฝากปกติ" : "ตรวจฝาก BO"}
           icon={<CirclePlus size={18} />}
         />
         <MetricCard
-          label="ถอน"
-          value={money.format(dayRow.diffWithdraw)}
-          tone={dayRow.diffWithdraw > 1 ? "bad" : "good"}
-          hint="ตรวจถอนเทียบ BO"
+          label="ถอน (หลังหักยอดอธิบาย)"
+          value={money.format(finalDiffWithdraw)}
+          tone={Math.abs(finalDiffWithdraw) > 1 ? "bad" : "good"}
+          hint={`Diff ดิบ ${money.format(dayRow.diffWithdraw)} · โอนตามแล้ว ${dayRow.failedWithdrawPaidCount}/${dayRow.failedWithdrawCount}`}
           icon={<CircleMinus size={18} />}
         />
       </section>
