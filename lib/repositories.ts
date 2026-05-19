@@ -26,7 +26,7 @@ async function selectAllPages<T extends JsonRecord>(
 
 export async function listStatementDaily(month: string): Promise<StatementDailyRow[]> {
   const { start, end } = monthRange(month);
-  return selectAllPages<StatementDailyRow & JsonRecord>(
+  const rows = await selectAllPages<StatementDailyRow & JsonRecord>(
     () => getSupabaseAdmin()
       .from("bank_statement_daily")
       .select("*")
@@ -36,6 +36,8 @@ export async function listStatementDaily(month: string): Promise<StatementDailyR
       .order("bank", { ascending: true }),
     "bank_statement_daily"
   );
+  if (rows.length) return rows;
+  return listStatementDailyFromStatements(month);
 }
 
 export async function listStatementDailyFromStatements(month: string): Promise<StatementDailyRow[]> {

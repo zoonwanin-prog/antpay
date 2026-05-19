@@ -1,4 +1,3 @@
-import { getSupabaseAdmin } from "@/lib/supabase";
 import { listBalancesThroughMonth, listRowsByMonth, listStatementDaily, getFailedPayoutItemsByDate } from "@/lib/repositories";
 import { normalizeMonth, round2 } from "@/lib/dates";
 import type { AuditRow, JsonRecord, StatementDailyRow } from "@/lib/types";
@@ -22,23 +21,19 @@ export type AuditAccountBreakdown = {
  */
 export async function getAuditAccountBreakdown(date: string): Promise<AuditAccountBreakdown[]> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
-  const supabase = getSupabaseAdmin();
-  const [{ data: dayRows, error: dayErr }, { data: priorRows, error: priorErr }] = await Promise.all([
-    supabase.from("bank_statement_daily").select("*").eq("date", date).order("bank", { ascending: true }),
-    supabase.from("bank_statement_daily").select("*").lt("date", date).order("date", { ascending: true })
-  ]);
-  if (dayErr) throw new Error(`bank_statement_daily: ${dayErr.message}`);
-  if (priorErr) throw new Error(`bank_statement_daily prior: ${priorErr.message}`);
+  const statementRows = await listStatementDaily(date.slice(0, 7));
+  const dayRows = statementRows.filter((row) => row.date === date);
+  const priorRows = statementRows.filter((row) => row.date < date);
 
   // latest ending_balance per account before `date`
   const openingMap = new Map<string, number>();
-  for (const row of (priorRows || []) as StatementDailyRow[]) {
+  for (const row of priorRows as StatementDailyRow[]) {
     const key = `${row.bank}|${row.account_no}`;
     openingMap.set(key, Number(row.ending_balance || 0));
   }
 
   const results: AuditAccountBreakdown[] = [];
-  for (const row of (dayRows || []) as StatementDailyRow[]) {
+  for (const row of dayRows as StatementDailyRow[]) {
     const key = `${row.bank}|${row.account_no}`;
     const opening = openingMap.get(key) || 0;
     const deposit = Number(row.deposit_total || 0);

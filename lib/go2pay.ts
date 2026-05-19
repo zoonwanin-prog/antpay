@@ -387,6 +387,7 @@ export async function syncBogo2payReports(startDate: string, endDate: string) {
   const rows: JsonRecord[] = [];
   let scanned = 0;
   let skippedFuture = 0;
+  let skippedEmpty = 0;
   const today = bangkokDate();
   const safeEndDate = endDate > today ? today : endDate;
   for (let date = startDate; date <= safeEndDate; date = addDays(date, 1)) {
@@ -400,6 +401,10 @@ export async function syncBogo2payReports(startDate: string, endDate: string) {
     const revenueFee = Number(summary.total_fee || 0);
     const payout = Number(summary.total_payout_amount || 0);
     const payoutFee = Number(summary.total_payout_fee || 0);
+    if (!revenue && !revenueFee && !payout && !payoutFee) {
+      skippedEmpty++;
+      continue;
+    }
     const time = date === bangkokDate() ? bangkokTime() : "23:55:00";
 
     rows.push({
@@ -431,7 +436,7 @@ export async function syncBogo2payReports(startDate: string, endDate: string) {
   }
 
   const result = await saveBogo2payRows(rows);
-  return { inserted: result.inserted, updated: result.updated, scanned, skipped: skippedFuture, rows: result.rows.length };
+  return { inserted: result.inserted, updated: result.updated, scanned, skipped: skippedFuture + skippedEmpty, skippedFuture, skippedEmpty, rows: result.rows.length };
 }
 
 function firstArray(value: unknown): Record<string, unknown>[] {

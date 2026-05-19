@@ -217,7 +217,7 @@ function StatusMessage({ status, message }: { status: "" | "ok" | "err"; message
 function BogoTable({ rows, date, page, pageCount, totalRows, onEdit, onDelete }: { rows: JsonRecord[]; date: string; page: number; pageCount: number; totalRows: number; onEdit: (row: JsonRecord) => void; onDelete: (row: JsonRecord) => void }) {
   return (
     <section className="panel data-list-panel is-stack">
-      <div className="panel-header"><div><h2>รายการ BoGo2pay</h2><p>รายการทั้งหมด เรียงจากล่าสุดไปเก่า</p></div></div>
+      <div className="panel-header"><div><h2>รายการ BoGo2pay</h2><p>รายการของวันที่เลือก เรียงจากล่าสุดไปเก่า</p></div></div>
       <div className="table-wrap">
         <table>
           <thead>
@@ -235,7 +235,7 @@ function BogoTable({ rows, date, page, pageCount, totalRows, onEdit, onDelete }:
           </tbody>
         </table>
       </div>
-      <TablePagination basePath="/bogo2pay" date={date} page={page} pageCount={pageCount} totalRows={totalRows} />
+      {pageCount > 1 ? <TablePagination basePath="/bogo2pay" date={date} page={page} pageCount={pageCount} totalRows={totalRows} /> : null}
     </section>
   );
 }
