@@ -38,10 +38,11 @@ function normalizeFeePercent(value: unknown): number {
 }
 
 function compactDetail(result: Record<string, unknown>): string {
-  return JSON.stringify(result, (_key, value) => {
+  const detail = JSON.stringify(result, (_key, value) => {
     if (Array.isArray(value) && value.length > 12) return `[${value.length} rows]`;
     return value;
   });
+  return detail.length > 1200 ? `${detail.slice(0, 1200)}...` : detail;
 }
 
 function escapeHtml(value: unknown): string {
@@ -385,7 +386,10 @@ async function saveBogo2payRows(rows: JsonRecord[]) {
 export async function syncBogo2payReports(startDate: string, endDate: string) {
   const rows: JsonRecord[] = [];
   let scanned = 0;
-  for (let date = startDate; date <= endDate; date = addDays(date, 1)) {
+  let skippedFuture = 0;
+  const today = bangkokDate();
+  const safeEndDate = endDate > today ? today : endDate;
+  for (let date = startDate; date <= safeEndDate; date = addDays(date, 1)) {
     const res = await fetchGo2Pay<{ data?: { summary?: Record<string, unknown> } }>(
       `/reports?start_date=${date}&end_date=${date}`,
       "BoGo2pay Report"
@@ -421,9 +425,13 @@ export async function syncBogo2payReports(startDate: string, endDate: string) {
       user_name: "auto"
     });
   }
+  const firstFutureDate = startDate > today ? startDate : addDays(today, 1);
+  for (let date = firstFutureDate; date <= endDate; date = addDays(date, 1)) {
+    skippedFuture++;
+  }
 
   const result = await saveBogo2payRows(rows);
-  return { inserted: result.inserted, updated: result.updated, scanned, rows: result.rows.length };
+  return { inserted: result.inserted, updated: result.updated, scanned, skipped: skippedFuture, rows: result.rows.length };
 }
 
 function firstArray(value: unknown): Record<string, unknown>[] {

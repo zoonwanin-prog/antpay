@@ -66,7 +66,6 @@ async function formatTransferCaption(row: JsonRecord, mode: "create" | "update")
     lines.push(`หมายเหตุ: ${escapeHtml(txt(row.note))}`);
   }
   if (txt(row.user_name)) lines.push(`ผู้บันทึก: ${escapeHtml(txt(row.user_name))}`);
-  if (txt(row.slip_url)) lines.push(`สลิป: ${escapeHtml(txt(row.slip_url))}`);
   return lines.join("\n");
 }
 
@@ -156,7 +155,6 @@ async function formatCryptoCaption(row: JsonRecord, mode: "create" | "update"): 
   lines.push(`• คงเหลือทั้งหมด: ${usdtShort.format(summary.balanceUsdt)} USDT / ${money.format(summary.balanceThb)} บาท`);
   if (txt(row.note)) lines.push(`หมายเหตุ: ${escapeHtml(txt(row.note))}`);
   if (txt(row.user_name)) lines.push(`ผู้บันทึก: ${escapeHtml(txt(row.user_name))}`);
-  if (txt(row.slip_url)) lines.push(`สลิป: ${escapeHtml(txt(row.slip_url))}`);
   return lines.join("\n");
 }
 

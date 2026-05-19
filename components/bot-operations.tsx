@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, Building2, CalendarDays, CalendarRange, Clock, DatabaseZap, ShieldCheck, Ticket, Wallet, Workflow } from "lucide-react";
+import { Bot, Building2, CalendarDays, CalendarRange, Clock, DatabaseZap, FileSpreadsheet, ShieldCheck, Ticket, Trash2, Wallet, Workflow } from "lucide-react";
 
 const operations = [
   { action: "sync_all", label: "Sync ทั้งหมด", icon: Workflow },
@@ -9,7 +9,9 @@ const operations = [
   { action: "safewallet", label: "Sync SafeWallet", icon: ShieldCheck },
   { action: "settlements", label: "Sync Settlement USDT", icon: DatabaseZap },
   { action: "bogo2pay", label: "Sync BoGo2pay", icon: Building2 },
-  { action: "wallet_snapshot", label: "Snap main+payout", icon: Wallet }
+  { action: "statement_daily", label: "Sync Statement Daily", icon: FileSpreadsheet },
+  { action: "wallet_snapshot", label: "Snap main+payout", icon: Wallet },
+  { action: "cleanup_bot_logs", label: "Cleanup Bot Logs", icon: Trash2 }
 ];
 
 function bangkokToday() {
