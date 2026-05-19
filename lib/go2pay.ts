@@ -1,5 +1,6 @@
 import { appConfig } from "@/lib/env";
 import { addDays, bangkokDate, bangkokTime, round2 } from "@/lib/dates";
+import { notifyEntryCreated } from "@/lib/notifications";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getGo2PayAdminToken } from "@/lib/system-settings";
 import { sendTelegram, telegramTarget } from "@/lib/telegram";
@@ -499,7 +500,19 @@ export async function syncCompletedSettlements(startDate: string, endDate: strin
   });
   if (!rows.length) return { inserted: 0, updated: 0, scanned: items.length, skipped: 0 };
   const result = await upsertWithCounts("crypto_transactions", rows, "source_ref");
-  return { inserted: result.inserted, updated: result.updated, scanned: items.length };
+  let notified = 0;
+  let notifySkipped = 0;
+  for (const row of result.rows.filter((saved) => result.insertedKeys.has(String(saved.source_ref || "")))) {
+    try {
+      const notifyResult = await notifyEntryCreated("crypto_transactions", row, { mode: "create" });
+      if (notifyResult.sent) notified++;
+      else notifySkipped++;
+    } catch (err) {
+      notifySkipped++;
+      console.warn(`[settlements] telegram notify failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  return { inserted: result.inserted, updated: result.updated, scanned: items.length, notified, notifySkipped };
 }
 
 export async function syncSafeWalletApprovedDeposits(startDate: string, endDate: string) {
