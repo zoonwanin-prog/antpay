@@ -117,9 +117,8 @@ async function getCryptoSummary(row: JsonRecord): Promise<CryptoSummary> {
       balanceUsdt += itemUsdt;
       balanceThb += itemThb;
     } else if (status === "ถอน USDT" || status === "โอน USDT" || status === "ขาย USDT") {
-      const averageCost = balanceUsdt > 0 ? balanceThb / balanceUsdt : Number(item.exchange_rate || 0);
       balanceUsdt -= itemUsdt;
-      balanceThb -= itemUsdt * averageCost;
+      balanceThb -= itemThb;
     }
   }
 
