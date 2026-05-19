@@ -1,9 +1,7 @@
 import { connection } from "next/server";
 import {
-  Banknote,
   Bitcoin,
   CalendarDays,
-  Home,
   Landmark,
   RefreshCw,
   ShieldCheck,
@@ -102,9 +100,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const bankDepositToday = daily?.bankDeposit ?? day?.bankDeposit ?? 0;
   const bankWithdrawToday = daily?.bankWithdraw ?? day?.bankWithdraw ?? 0;
   const expenseToday = daily?.expense ?? day?.sheetExpense ?? 0;
-  const transferOnlyToday = day?.transferOnly ?? 0;
-  const settlementToday = day?.settlement ?? 0;
-  const buyUSDTthbToday = crypto?.buyThb ?? day?.buyUSDTthb ?? 0;
   const frozenBalance = daily?.frozenBalance ?? 0;
 
   return (
@@ -148,16 +143,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <DashboardCard label="ฝากธนาคารวันนี้" value={money.format(bankDepositToday)} tone="green" />
           <DashboardCard label="ถอนธนาคารวันนี้" value={money.format(bankWithdrawToday)} tone="red" />
           <DashboardCard label="รายจ่ายวันนี้" value={money.format(expenseToday)} tone="red" />
-        </div>
-      </section>
-
-      <section className="daily-section">
-        <SectionTitle icon={<Banknote size={17} />}>ยอดเคลื่อนไหว</SectionTitle>
-        <div className="daily-grid cols-4">
-          <DashboardCard label="โยกเงิน" value={money.format(transferOnlyToday)} tone="blue" />
-          <DashboardCard label="โอน SETTLEMENT" value={money.format(settlementToday)} tone="purple" />
-          <DashboardCard label="ซื้อ USDT (บาท)" value={money.format(buyUSDTthbToday)} tone="orange" />
-          <DashboardCard label="SAFEWALLET AMOUNT" value={money.format(safeWalletAmount)} tone="purple" />
         </div>
       </section>
 
