@@ -28,18 +28,13 @@ export function AuditFailedList({ items }: { items: AuditDetail[] }) {
       if (!json.success) throw new Error(json.message || "ปรับสถานะไม่สำเร็จ");
       setList((current) =>
         current.map((row) =>
-          row.id === item.id ? (() => {
-            const paidDate = !item.followupPaid
-              ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date())
-              : "";
-            return {
-              ...row,
-              followupPaid: !item.followupPaid,
-              followupStatus: !item.followupPaid ? "paid" : "pending",
-              followupPaidDate: paidDate,
-              followupPaidSameDay: Boolean(paidDate && paidDate === row.payoutDate)
-            };
-          })() : row
+          row.id === item.id
+            ? {
+                ...row,
+                followupPaid: !item.followupPaid,
+                followupStatus: !item.followupPaid ? "paid" : "pending"
+              }
+            : row
         )
       );
       setTone("ok");
@@ -73,12 +68,9 @@ export function AuditFailedList({ items }: { items: AuditDetail[] }) {
               onChange={() => toggle(item)}
             />
             <span className="audit-failed-state">
-              {item.followupPaid ? (item.followupPaidSameDay ? "โอนตามวันเดียวกัน" : "โอนตามคนละวัน") : "ยังโอนไม่สำเร็จ"}
+              {item.followupPaid ? "โอนตามแล้ว" : "ยังโอนไม่สำเร็จ"}
             </span>
           </label>
-          {item.followupPaid && item.followupPaidDate ? (
-            <span className="audit-failed-meta">วันที่โอนตาม {item.followupPaidDate}</span>
-          ) : null}
         </div>
       ))}
       {message ? (

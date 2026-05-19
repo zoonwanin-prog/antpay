@@ -51,10 +51,6 @@ function emptyDayRow(date: string): AuditRow {
     failedWithdrawCount: 0,
     failedWithdrawPaid: 0,
     failedWithdrawPaidCount: 0,
-    failedWithdrawPaidSameDay: 0,
-    failedWithdrawPaidSameDayCount: 0,
-    failedWithdrawPaidOtherDay: 0,
-    failedWithdrawPaidOtherDayCount: 0,
     failedWithdrawPending: 0,
     failedWithdrawPendingCount: 0,
     failedWithdrawDetails: [],
@@ -106,10 +102,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const dayRow: AuditRow = audit.rows.find((row) => row.date === date) || emptyDayRow(date);
 
   // อ้างอิงและสรุป Diff ถอนหลังหักยอด
-  const sameDayFollowup = Math.max(dayRow.failedWithdrawPaidSameDay, dayRow.errorFollowTransfer);
-  const totalReference = dayRow.transferOnly + dayRow.settlement + sameDayFollowup + dayRow.otherTransfer + dayRow.buyUSDTthb;
+  const totalReference = dayRow.transferOnly + dayRow.settlement + dayRow.errorFollowTransfer + dayRow.otherTransfer + dayRow.buyUSDTthb;
   const totalExpenseAll = dayRow.statementFee + dayRow.sheetExpense;
-  const finalDiffWithdraw = dayRow.diffWithdraw - totalExpenseAll - totalReference;
+  const finalDiffWithdraw = dayRow.diffWithdraw - dayRow.failedWithdrawPaid - totalExpenseAll - totalReference;
 
   return (
     <AdminShell
@@ -200,8 +195,6 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
               <div className="summary-split-row"><span>ถอนไม่สำเร็จ (ต้องโอนตาม)</span><strong>{money.format(dayRow.failedWithdraw)}</strong></div>
               <div className="summary-split-row"><span>จำนวนรายการไม่สำเร็จ</span><strong>{dayRow.failedWithdrawCount} รายการ</strong></div>
               <div className="summary-split-row"><span>โอนตามแล้ว</span><strong>{dayRow.failedWithdrawPaidCount} รายการ / {money.format(dayRow.failedWithdrawPaid)}</strong></div>
-              <div className="summary-split-row"><span>โอนตามวันเดียวกัน</span><strong>{dayRow.failedWithdrawPaidSameDayCount} รายการ / {money.format(dayRow.failedWithdrawPaidSameDay)}</strong></div>
-              <div className="summary-split-row"><span>โอนตามคนละวัน</span><strong>{dayRow.failedWithdrawPaidOtherDayCount} รายการ / {money.format(dayRow.failedWithdrawPaidOtherDay)}</strong></div>
               <div className="summary-split-row"><span>ค้างโอนตาม</span><strong>{dayRow.failedWithdrawPendingCount} รายการ / {money.format(dayRow.failedWithdrawPending)}</strong></div>
               <div className="summary-split-row"><span>ถอนธนาคาร</span><strong>{money.format(dayRow.bankWithdraw)}</strong></div>
               <div className="summary-split-row"><span>Diff ถอน</span><strong className="audit-diff-value">{money.format(dayRow.diffWithdraw)}</strong></div>
@@ -209,8 +202,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             <div className="audit-final-diff">
               <p className="audit-final-title">หายอด Diff ถอนหลังหักรายการที่อธิบายได้</p>
               <p>Diff ถอน: {money.format(dayRow.diffWithdraw)}</p>
-              <p>- โอนตามวันเดียวกัน: {money.format(sameDayFollowup)} ({dayRow.failedWithdrawPaidSameDayCount} รายการ)</p>
-              <p>โอนตามคนละวัน: {money.format(dayRow.failedWithdrawPaidOtherDay)} ({dayRow.failedWithdrawPaidOtherDayCount} รายการ) แสดงไว้เฉยๆ ไม่หัก Diff วันนี้</p>
+              <p>- ถอนไม่สำเร็จที่โอนแล้ว: {money.format(dayRow.failedWithdrawPaid)} ({dayRow.failedWithdrawPaidCount} รายการ)</p>
               <p>- รายจ่ายจากชีท: {money.format(dayRow.sheetExpense)}</p>
               <p>- Fee ค่าธรรมเนียม: {money.format(dayRow.statementFee)}</p>
               <p>- ยอดอ้างอิงทั้งหมด: {money.format(totalReference)}</p>
@@ -275,8 +267,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <div className="audit-ref-row audit-ref-strong"><span>รายจ่ายรวม</span><strong>{money.format(totalExpenseAll)}</strong></div>
           <div className="audit-ref-row"><span>โยกเงิน</span><strong>{money.format(dayRow.transferOnly)}</strong></div>
           <div className="audit-ref-row"><span>โอน Settlement</span><strong>{money.format(dayRow.settlement)}</strong></div>
-          <div className="audit-ref-row"><span>โอนตามยอดerrorวันนี้</span><strong>{money.format(dayRow.errorFollowTransfer)}</strong></div>
-          <div className="audit-ref-row"><span>โอนตามคนละวัน</span><strong>{money.format(dayRow.failedWithdrawPaidOtherDay)}</strong></div>
+          <div className="audit-ref-row"><span>โอนตามยอดerror</span><strong>{money.format(dayRow.errorFollowTransfer)}</strong></div>
           <div className="audit-ref-row"><span>อื่นๆ</span><strong>{money.format(dayRow.otherTransfer)}</strong></div>
           <div className="audit-ref-row"><span>เติมทุน</span><strong>{money.format(dayRow.capitalIn)}</strong></div>
           <div className="audit-ref-row"><span>คืนทุน</span><strong>{money.format(dayRow.capitalReturn)}</strong></div>
@@ -311,10 +302,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 <tr><td colSpan={5}><div className="empty-state">ยังไม่มีข้อมูลในเดือนนี้</div></td></tr>
               ) : (
                 audit.rows.map((row) => {
-                  const rowSameDayFollowup = Math.max(row.failedWithdrawPaidSameDay, row.errorFollowTransfer);
-                  const refSum = row.transferOnly + row.settlement + rowSameDayFollowup + row.otherTransfer + row.buyUSDTthb;
+                  const refSum = row.transferOnly + row.settlement + row.errorFollowTransfer + row.otherTransfer + row.buyUSDTthb;
                   const expenseSum = row.statementFee + row.sheetExpense;
-                  const finalDiff = row.diffWithdraw - expenseSum - refSum;
+                  const finalDiff = row.diffWithdraw - row.failedWithdrawPaid - expenseSum - refSum;
                   return (
                     <tr key={row.date}>
                       <td>{ddmmyyyy(row.date)}</td>
