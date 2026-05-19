@@ -15,6 +15,7 @@ export type StatementDailyRow = {
 
 export type AuditDetail = {
   id: string;
+  payoutDate: string;
   amount: number;
   recipientName: string;
   recipientAccountNo: string;
@@ -22,6 +23,7 @@ export type AuditDetail = {
   followupStatus: "paid" | "pending" | string;
   followupPaid: boolean;
   followupUpdatedAt: string;
+  followupPaidDate: string;
   followupBy: string;
 };
 

@@ -1467,7 +1467,7 @@ textarea {
   border-bottom: 1px dashed var(--border);
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   min-height: 42px;
   padding: 8px 0;
 }
@@ -1492,6 +1492,29 @@ textarea {
   height: 18px;
   margin: 0;
   width: 18px;
+}
+
+.audit-failed-date {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.audit-failed-date span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.audit-failed-date input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  height: 34px;
+  padding: 0 8px;
 }
 
 .audit-failed-state {

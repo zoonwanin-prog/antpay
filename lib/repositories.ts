@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { monthRange, round2 } from "@/lib/dates";
+import { bangkokDate, monthRange, round2 } from "@/lib/dates";
 import { fetchStatementRows, isFailedStatus, normalizeBankStatementRow } from "@/lib/statement";
 import type { AuditDetail, JsonRecord, StatementDailyRow } from "@/lib/types";
 
@@ -308,6 +308,7 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
     const id = String(row.id || row.uuid || row.payout_item_id || "");
     const followup = followups[id] || { status: "pending", updatedAt: "", user: "", note: "" };
     const isPaid = followup.status === "paid";
+    const paidDate = followup.updatedAt ? bangkokDate(new Date(followup.updatedAt)) : "";
     result.byDate[date] = round2((result.byDate[date] || 0) + amount);
     result.byDateCount[date] = (result.byDateCount[date] || 0) + 1;
     if (isPaid) {
@@ -320,6 +321,7 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
     result.detailsByDate[date] ||= [];
     result.detailsByDate[date].push({
       id,
+      payoutDate: date,
       amount: round2(amount),
       recipientName: String(row.recipient_name || ""),
       recipientAccountNo: String(row.recipient_account_no || ""),
@@ -327,6 +329,7 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
       followupStatus: followup.status,
       followupPaid: isPaid,
       followupUpdatedAt: followup.updatedAt,
+      followupPaidDate: paidDate,
       followupBy: followup.user
     });
     result.failedCount++;
@@ -335,14 +338,17 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
   return result;
 }
 
-export async function markPayoutFollowupPaid(itemId: string, paid: boolean, user = "admin") {
+export async function markPayoutFollowupPaid(itemId: string, paid: boolean, user = "admin", paidDate?: string) {
   const now = new Date().toISOString();
+  const paidAt = paid && paidDate && /^\d{4}-\d{2}-\d{2}$/.test(paidDate)
+    ? new Date(`${paidDate}T12:00:00+07:00`).toISOString()
+    : now;
   const payload = {
     payout_item_id: itemId,
     followup_status: paid ? "paid" : "pending",
-    followup_paid_at: paid ? now : null,
+    followup_paid_at: paid ? paidAt : null,
     followup_paid_by: user,
-    note: paid ? "โอนตามแล้ว" : "กลับเป็นค้างโอน",
+    note: paid ? `โอนตามแล้ว${paidDate ? ` (${paidDate})` : ""}` : "กลับเป็นค้างโอน",
     updated_at: now
   };
   const { data, error } = await getSupabaseAdmin()
