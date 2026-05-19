@@ -202,6 +202,8 @@ export async function getAuditData(monthInput?: string | null) {
       failedWithdrawCount: failedPayout.byDateCount[date] || 0,
       failedWithdrawPaid: round2(failedPayout.byDatePaid[date] || 0),
       failedWithdrawPaidCount: failedPayout.byDatePaidCount[date] || 0,
+      failedWithdrawPaidSameDay: round2(failedPayout.byDatePaidSameDay[date] || 0),
+      failedWithdrawPaidSameDayCount: failedPayout.byDatePaidSameDayCount[date] || 0,
       failedWithdrawPending: round2(failedPayout.byDatePending[date] || 0),
       failedWithdrawPendingCount: failedPayout.byDatePendingCount[date] || 0,
       failedWithdrawDetails: failedPayout.detailsByDate[date] || [],

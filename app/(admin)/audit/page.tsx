@@ -51,6 +51,8 @@ function emptyDayRow(date: string): AuditRow {
     failedWithdrawCount: 0,
     failedWithdrawPaid: 0,
     failedWithdrawPaidCount: 0,
+    failedWithdrawPaidSameDay: 0,
+    failedWithdrawPaidSameDayCount: 0,
     failedWithdrawPending: 0,
     failedWithdrawPendingCount: 0,
     failedWithdrawDetails: [],
@@ -104,7 +106,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   // อ้างอิงและสรุป Diff ถอนหลังหักยอด
   const totalReference = dayRow.transferOnly + dayRow.settlement + dayRow.errorFollowTransfer + dayRow.otherTransfer + dayRow.buyUSDTthb;
   const totalExpenseAll = dayRow.statementFee + dayRow.sheetExpense;
-  const finalDiffWithdraw = dayRow.diffWithdraw - dayRow.failedWithdrawPaid - totalExpenseAll - totalReference;
+  const finalDiffWithdraw = dayRow.diffWithdraw - dayRow.failedWithdrawPaidSameDay - totalExpenseAll - totalReference;
 
   return (
     <AdminShell
@@ -202,7 +204,10 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             <div className="audit-final-diff">
               <p className="audit-final-title">หายอด Diff ถอนหลังหักรายการที่อธิบายได้</p>
               <p>Diff ถอน: {money.format(dayRow.diffWithdraw)}</p>
-              <p>- ถอนไม่สำเร็จที่โอนแล้ว: {money.format(dayRow.failedWithdrawPaid)} ({dayRow.failedWithdrawPaidCount} รายการ)</p>
+              <p>- ถอนไม่สำเร็จที่โอนตามวันเดียวกัน: {money.format(dayRow.failedWithdrawPaidSameDay)} ({dayRow.failedWithdrawPaidSameDayCount} รายการ)</p>
+              {dayRow.failedWithdrawPaid > dayRow.failedWithdrawPaidSameDay ? (
+                <p>โอนตามวันอื่น: {money.format(dayRow.failedWithdrawPaid - dayRow.failedWithdrawPaidSameDay)} ไม่เอาไปรวมใน Diff วันนี้</p>
+              ) : null}
               <p>- รายจ่ายจากชีท: {money.format(dayRow.sheetExpense)}</p>
               <p>- Fee ค่าธรรมเนียม: {money.format(dayRow.statementFee)}</p>
               <p>- ยอดอ้างอิงทั้งหมด: {money.format(totalReference)}</p>
@@ -304,7 +309,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 audit.rows.map((row) => {
                   const refSum = row.transferOnly + row.settlement + row.errorFollowTransfer + row.otherTransfer + row.buyUSDTthb;
                   const expenseSum = row.statementFee + row.sheetExpense;
-                  const finalDiff = row.diffWithdraw - row.failedWithdrawPaid - expenseSum - refSum;
+                  const finalDiff = row.diffWithdraw - row.failedWithdrawPaidSameDay - expenseSum - refSum;
                   return (
                     <tr key={row.date}>
                       <td>{ddmmyyyy(row.date)}</td>

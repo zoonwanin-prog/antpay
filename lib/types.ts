@@ -44,6 +44,8 @@ export type AuditRow = {
   failedWithdrawCount: number;
   failedWithdrawPaid: number;
   failedWithdrawPaidCount: number;
+  failedWithdrawPaidSameDay: number;
+  failedWithdrawPaidSameDayCount: number;
   failedWithdrawPending: number;
   failedWithdrawPendingCount: number;
   failedWithdrawDetails: AuditDetail[];

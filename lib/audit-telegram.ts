@@ -30,7 +30,7 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
   const coinFee = summaryRow?.feeCost || 0;
   const totalProfit = feeProfit + coinFee;
   const totalReference = row.transferOnly + row.settlement + row.errorFollowTransfer + row.otherTransfer + row.buyUSDTthb;
-  const finalDiffWithdraw = row.diffWithdraw - row.failedWithdrawPaid - row.sheetExpense - row.statementFee - totalReference;
+  const finalDiffWithdraw = row.diffWithdraw - row.failedWithdrawPaidSameDay - row.sheetExpense - row.statementFee - totalReference;
 
   return [
     "📊 สรุปรายวัน + Audit",
@@ -64,7 +64,8 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
     "",
     "หายอด Diff ถอนหลังหักรายการที่อธิบายได้",
     `Diff ถอน: ${money.format(row.diffWithdraw)}`,
-    `- ถอนไม่สำเร็จที่โอนแล้ว: ${money.format(row.failedWithdrawPaid)}`,
+    `- ถอนไม่สำเร็จที่โอนตามวันเดียวกัน: ${money.format(row.failedWithdrawPaidSameDay)}`,
+    `โอนตามวันอื่น: ${money.format(row.failedWithdrawPaid - row.failedWithdrawPaidSameDay)} (ไม่เอาไปรวมใน Diff วันนี้)`,
     `- รายจ่ายจากชีท: ${money.format(row.sheetExpense)}`,
     `- Fee ค่าธรรมเนียม: ${money.format(row.statementFee)}`,
     `- ยอดอ้างอิงทั้งหมด: ${money.format(totalReference)}`,
