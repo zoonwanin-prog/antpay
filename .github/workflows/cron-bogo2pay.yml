@@ -1,0 +1,17 @@
+name: Go2Pay BoGo2pay Cron
+
+on:
+  schedule:
+    # GitHub Actions schedules run in UTC. 16:55 UTC = 23:55 Asia/Bangkok.
+    - cron: "55 16 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync BoGo2pay daily report
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://go2pay.vercel.app/api/cron/bogo2pay"

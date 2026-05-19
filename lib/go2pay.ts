@@ -1,5 +1,5 @@
 import { appConfig } from "@/lib/env";
-import { bangkokDate, bangkokTime } from "@/lib/dates";
+import { addDays, bangkokDate, bangkokTime, round2 } from "@/lib/dates";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getGo2PayAdminToken } from "@/lib/system-settings";
 import { sendTelegram, telegramTarget } from "@/lib/telegram";
@@ -337,6 +337,93 @@ export async function syncWalletSnapshot(date = bangkokDate()) {
   ];
   const result = await upsertBalancesWithCounts(rows);
   return { inserted: result.inserted, updated: result.updated, scanned: merchants.length, rows: result.rows.length };
+}
+
+async function saveBogo2payRows(rows: JsonRecord[]) {
+  let inserted = 0;
+  let updated = 0;
+  const saved: JsonRecord[] = [];
+  const supabase = getSupabaseAdmin();
+
+  for (const row of rows) {
+    const { data: existingRows, error: lookupError } = await supabase
+      .from("bogo2pay_transactions")
+      .select("id")
+      .eq("date", row.date)
+      .eq("item", row.item)
+      .eq("type", row.type)
+      .in("user_name", ["auto", "cron"])
+      .limit(1);
+    if (lookupError) throw new Error(`bogo2pay lookup failed: ${lookupError.message}`);
+
+    const existingId = String((existingRows?.[0] as JsonRecord | undefined)?.id || "");
+    if (existingId) {
+      const { data, error } = await supabase
+        .from("bogo2pay_transactions")
+        .update(row)
+        .eq("id", existingId)
+        .select()
+        .single();
+      if (error) throw new Error(`bogo2pay update failed: ${error.message}`);
+      updated++;
+      saved.push((data || {}) as JsonRecord);
+    } else {
+      const { data, error } = await supabase
+        .from("bogo2pay_transactions")
+        .insert(row)
+        .select()
+        .single();
+      if (error) throw new Error(`bogo2pay insert failed: ${error.message}`);
+      inserted++;
+      saved.push((data || {}) as JsonRecord);
+    }
+  }
+
+  return { inserted, updated, rows: saved };
+}
+
+export async function syncBogo2payReports(startDate: string, endDate: string) {
+  const rows: JsonRecord[] = [];
+  let scanned = 0;
+  for (let date = startDate; date <= endDate; date = addDays(date, 1)) {
+    const res = await fetchGo2Pay<{ data?: { summary?: Record<string, unknown> } }>(
+      `/reports?start_date=${date}&end_date=${date}`,
+      "BoGo2pay Report"
+    );
+    const summary = res.data?.summary || {};
+    scanned++;
+    const revenue = Number(summary.total_revenue || 0);
+    const revenueFee = Number(summary.total_fee || 0);
+    const payout = Number(summary.total_payout_amount || 0);
+    const payoutFee = Number(summary.total_payout_fee || 0);
+    const time = date === bangkokDate() ? bangkokTime() : "23:55:00";
+
+    rows.push({
+      date,
+      time,
+      item: "Go2Pay",
+      type: "ฝาก",
+      actual_amount: round2(revenue),
+      fee: round2(revenueFee),
+      net_amount: round2(revenue - revenueFee),
+      note: "Go2Pay report sync",
+      user_name: "auto"
+    });
+    rows.push({
+      date,
+      time: date === bangkokDate() ? time : "23:56:00",
+      item: "Go2Pay",
+      type: "ถอน",
+      actual_amount: round2(payout),
+      fee: round2(payoutFee),
+      net_amount: round2(payout - payoutFee),
+      note: "Go2Pay report sync",
+      user_name: "auto"
+    });
+  }
+
+  const result = await saveBogo2payRows(rows);
+  return { inserted: result.inserted, updated: result.updated, scanned, rows: result.rows.length };
 }
 
 function firstArray(value: unknown): Record<string, unknown>[] {

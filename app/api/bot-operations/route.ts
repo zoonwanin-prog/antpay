@@ -1,6 +1,6 @@
 import { addDays, bangkokDate, monthRange } from "@/lib/dates";
 import { jsonError, jsonOk } from "@/lib/http";
-import { runLoggedBotJob, syncCompletedSettlements, syncSafeWalletApprovedDeposits, syncTickets, syncWalletSnapshot } from "@/lib/go2pay";
+import { runLoggedBotJob, syncBogo2payReports, syncCompletedSettlements, syncSafeWalletApprovedDeposits, syncTickets, syncWalletSnapshot } from "@/lib/go2pay";
 
 type SyncScope = {
   mode: "today" | "date" | "month";
@@ -62,6 +62,13 @@ export async function POST(request: Request) {
         duplicateChecked: true
       });
     }
+    if (action === "bogo2pay") {
+      return ok(action, {
+        ...(await runLoggedBotJob(`Manual bogo2pay ${scope.label}`, () => syncBogo2payReports(scope.start, scope.end))),
+        scope,
+        duplicateChecked: true
+      });
+    }
     if (action === "wallet_snapshot") {
       return ok(action, {
         ...(await runLoggedBotJob(`Manual wallet_snapshot ${scope.snapshotDate}`, () => syncWalletSnapshot(scope.snapshotDate))),
@@ -74,6 +81,7 @@ export async function POST(request: Request) {
         await runLoggedBotJob(`Manual tickets ${scope.label}`, () => syncTickets()),
         await runLoggedBotJob(`Manual safewallet ${scope.label}`, () => syncSafeWalletApprovedDeposits(scope.start, scope.end)),
         await runLoggedBotJob(`Manual settlements ${scope.label}`, () => syncCompletedSettlements(scope.start, scope.end)),
+        await runLoggedBotJob(`Manual bogo2pay ${scope.label}`, () => syncBogo2payReports(scope.start, scope.end)),
         await runLoggedBotJob(`Manual wallet_snapshot ${scope.snapshotDate}`, () => syncWalletSnapshot(scope.snapshotDate))
       ];
       return ok(action, {

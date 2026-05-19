@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, CalendarDays, CalendarRange, Clock, DatabaseZap, ShieldCheck, Ticket, Wallet, Workflow } from "lucide-react";
+import { Bot, Building2, CalendarDays, CalendarRange, Clock, DatabaseZap, ShieldCheck, Ticket, Wallet, Workflow } from "lucide-react";
 
 const operations = [
   { action: "sync_all", label: "Sync ทั้งหมด", icon: Workflow },
   { action: "tickets", label: "Sync Ticket", icon: Ticket },
   { action: "safewallet", label: "Sync SafeWallet", icon: ShieldCheck },
   { action: "settlements", label: "Sync Settlement USDT", icon: DatabaseZap },
+  { action: "bogo2pay", label: "Sync BoGo2pay", icon: Building2 },
   { action: "wallet_snapshot", label: "Snap main+payout", icon: Wallet }
 ];
 

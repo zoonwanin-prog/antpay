@@ -116,12 +116,12 @@ function buildLatestBalanceMap(balanceRows: JsonRecord[]): LatestBalance[] {
 
 /**
  * สำหรับ snapshot Wallet (Main, Payout, SafeWallet, Frozen) ที่ cron upsert ลง balances
- * ใช้ค่าล่าสุดของวัน — ถ้าวันนั้นไม่มี ใช้ค่าล่าสุดของวันที่ก่อนหน้า
+ * ใช้เฉพาะค่าของวันที่เลือก ถ้าวันนั้นไม่มีข้อมูลให้เป็น 0
  */
 function pickWalletSnapshot(latest: LatestBalance[], date: string, account: string): number {
   const filtered = latest
-    .filter((row) => row.account === account && row.date <= date)
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .filter((row) => row.account === account && row.date === date)
+    .sort((a, b) => a.order.localeCompare(b.order));
   if (!filtered.length) return 0;
   return filtered[filtered.length - 1].amount;
 }
@@ -135,6 +135,14 @@ function sumBankAccountBalance(latest: LatestBalance[], date: string): number {
   );
   const sum = bankRows.reduce((acc, row) => acc + row.amount, 0);
   return round2(sum);
+}
+
+function pickBankAccountBalance(latest: LatestBalance[], date: string): number | null {
+  const bankRows = latest.filter(
+    (row) => row.date === date && (row.type === "บัญชีฝาก" || row.type === "บัญชีถอน")
+  );
+  if (!bankRows.length) return null;
+  return round2(bankRows.reduce((acc, row) => acc + row.amount, 0));
 }
 
 export async function getMonthlySummary(monthInput?: string | null): Promise<MonthlySummary> {
@@ -291,9 +299,12 @@ export async function getMonthlySummary(monthInput?: string | null): Promise<Mon
   const cryptoRowsOut: SummaryCryptoRow[] = [];
 
   for (const date of sortedDates) {
-    const accountBalance = sumBankAccountBalance(latestBalances, date) || previousAccountBalance;
-    const accountDelta = round2(accountBalance - previousAccountBalance);
-    previousAccountBalance = accountBalance;
+    const pickedAccountBalance = pickBankAccountBalance(latestBalances, date);
+    const accountBalance = pickedAccountBalance ?? 0;
+    const accountDelta = pickedAccountBalance === null ? 0 : round2(accountBalance - previousAccountBalance);
+    if (pickedAccountBalance !== null) {
+      previousAccountBalance = accountBalance;
+    }
 
     rows.push({
       date,
