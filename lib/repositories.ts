@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { monthRange, round2 } from "@/lib/dates";
+import { bangkokDate, monthRange, round2 } from "@/lib/dates";
 import { fetchStatementRows, isFailedStatus, normalizeBankStatementRow } from "@/lib/statement";
 import type { AuditDetail, JsonRecord, StatementDailyRow } from "@/lib/types";
 
@@ -272,6 +272,10 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
   byDateCount: Record<string, number>;
   byDatePaid: Record<string, number>;
   byDatePaidCount: Record<string, number>;
+  byDatePaidSameDay: Record<string, number>;
+  byDatePaidSameDayCount: Record<string, number>;
+  byDatePaidOtherDay: Record<string, number>;
+  byDatePaidOtherDayCount: Record<string, number>;
   byDatePending: Record<string, number>;
   byDatePendingCount: Record<string, number>;
   detailsByDate: Record<string, AuditDetail[]>;
@@ -283,6 +287,10 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
     byDateCount: {} as Record<string, number>,
     byDatePaid: {} as Record<string, number>,
     byDatePaidCount: {} as Record<string, number>,
+    byDatePaidSameDay: {} as Record<string, number>,
+    byDatePaidSameDayCount: {} as Record<string, number>,
+    byDatePaidOtherDay: {} as Record<string, number>,
+    byDatePaidOtherDayCount: {} as Record<string, number>,
     byDatePending: {} as Record<string, number>,
     byDatePendingCount: {} as Record<string, number>,
     detailsByDate: {} as Record<string, AuditDetail[]>,
@@ -308,11 +316,20 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
     const id = String(row.id || row.uuid || row.payout_item_id || "");
     const followup = followups[id] || { status: "pending", updatedAt: "", user: "", note: "" };
     const isPaid = followup.status === "paid";
+    const paidDate = followup.updatedAt ? bangkokDate(new Date(followup.updatedAt)) : "";
+    const paidSameDay = isPaid && paidDate === date;
     result.byDate[date] = round2((result.byDate[date] || 0) + amount);
     result.byDateCount[date] = (result.byDateCount[date] || 0) + 1;
     if (isPaid) {
       result.byDatePaid[date] = round2((result.byDatePaid[date] || 0) + amount);
       result.byDatePaidCount[date] = (result.byDatePaidCount[date] || 0) + 1;
+      if (paidSameDay) {
+        result.byDatePaidSameDay[date] = round2((result.byDatePaidSameDay[date] || 0) + amount);
+        result.byDatePaidSameDayCount[date] = (result.byDatePaidSameDayCount[date] || 0) + 1;
+      } else {
+        result.byDatePaidOtherDay[date] = round2((result.byDatePaidOtherDay[date] || 0) + amount);
+        result.byDatePaidOtherDayCount[date] = (result.byDatePaidOtherDayCount[date] || 0) + 1;
+      }
     } else {
       result.byDatePending[date] = round2((result.byDatePending[date] || 0) + amount);
       result.byDatePendingCount[date] = (result.byDatePendingCount[date] || 0) + 1;
@@ -320,6 +337,7 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
     result.detailsByDate[date] ||= [];
     result.detailsByDate[date].push({
       id,
+      payoutDate: date,
       amount: round2(amount),
       recipientName: String(row.recipient_name || ""),
       recipientAccountNo: String(row.recipient_account_no || ""),
@@ -327,6 +345,8 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
       followupStatus: followup.status,
       followupPaid: isPaid,
       followupUpdatedAt: followup.updatedAt,
+      followupPaidDate: paidDate,
+      followupPaidSameDay: paidSameDay,
       followupBy: followup.user
     });
     result.failedCount++;

@@ -29,8 +29,9 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
   const feeProfit = summaryRow?.feeProfit || 0;
   const coinFee = summaryRow?.feeCost || 0;
   const totalProfit = feeProfit + coinFee;
-  const totalReference = row.transferOnly + row.settlement + row.errorFollowTransfer + row.otherTransfer + row.buyUSDTthb;
-  const finalDiffWithdraw = row.diffWithdraw - row.failedWithdrawPaid - row.sheetExpense - row.statementFee - totalReference;
+  const sameDayFollowup = Math.max(row.failedWithdrawPaidSameDay, row.errorFollowTransfer);
+  const totalReference = row.transferOnly + row.settlement + sameDayFollowup + row.otherTransfer + row.buyUSDTthb;
+  const finalDiffWithdraw = row.diffWithdraw - row.sheetExpense - row.statementFee - totalReference;
 
   return [
     "📊 สรุปรายวัน + Audit",
@@ -64,7 +65,8 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
     "",
     "หายอด Diff ถอนหลังหักรายการที่อธิบายได้",
     `Diff ถอน: ${money.format(row.diffWithdraw)}`,
-    `- ถอนไม่สำเร็จที่โอนแล้ว: ${money.format(row.failedWithdrawPaid)}`,
+    `- โอนตามวันเดียวกัน: ${money.format(sameDayFollowup)}`,
+    `โอนตามคนละวัน: ${money.format(row.failedWithdrawPaidOtherDay)} (แสดงเฉยๆ ไม่หัก Diff วันนี้)`,
     `- รายจ่ายจากชีท: ${money.format(row.sheetExpense)}`,
     `- Fee ค่าธรรมเนียม: ${money.format(row.statementFee)}`,
     `- ยอดอ้างอิงทั้งหมด: ${money.format(totalReference)}`,
@@ -75,7 +77,7 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
     "🔄 ยอดอ้างอิง",
     `โยกเงิน: ${money.format(row.transferOnly)}`,
     `โอน Settlement: ${money.format(row.settlement)}`,
-    `โอนตามยอด error: ${money.format(row.errorFollowTransfer)}`,
+    `โอนตามยอด error วันนี้: ${money.format(row.errorFollowTransfer)}`,
     `อื่นๆ: ${money.format(row.otherTransfer)}`,
     `รายจ่ายจากชีท: ${money.format(row.sheetExpense)}`,
     `Fee ค่าธรรมเนียม: ${money.format(row.statementFee)}`,
@@ -90,6 +92,8 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
     "⚠️ รายการถอนไม่สำเร็จ",
     `ทั้งหมด: ${row.failedWithdrawCount} รายการ / ${money.format(row.failedWithdraw)} บาท`,
     `โอนแล้ว: ${row.failedWithdrawPaidCount} รายการ / ${money.format(row.failedWithdrawPaid)} บาท`,
+    `โอนวันเดียวกัน: ${row.failedWithdrawPaidSameDayCount} รายการ / ${money.format(row.failedWithdrawPaidSameDay)} บาท`,
+    `โอนคนละวัน: ${row.failedWithdrawPaidOtherDayCount} รายการ / ${money.format(row.failedWithdrawPaidOtherDay)} บาท`,
     `ค้างโอน: ${row.failedWithdrawPendingCount} รายการ / ${money.format(row.failedWithdrawPending)} บาท`,
     "━━━━━━━━━━━━━━━━━━━━"
   ].join("\n");
