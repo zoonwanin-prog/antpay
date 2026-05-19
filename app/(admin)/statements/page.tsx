@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { CalendarRange, FileText, RefreshCw } from "lucide-react";
 import { AdminShell, MetricCard } from "@/components/admin-shell";
 import { normalizeMonth } from "@/lib/dates";
-import { listStatementDailyFromStatements } from "@/lib/repositories";
+import { listStatementDaily } from "@/lib/repositories";
 import type { StatementDailyRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,7 @@ export default async function StatementsPage({ searchParams }: { searchParams: P
   let rows: StatementDailyRow[] = [];
   let setupError = "";
   try {
-    rows = await listStatementDailyFromStatements(month);
+    rows = await listStatementDaily(month);
   } catch (error) {
     setupError = error instanceof Error ? error.message : "ยังไม่สามารถโหลดข้อมูลได้";
   }

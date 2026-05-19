@@ -153,6 +153,13 @@ function round2(value: number) {
   return Math.round((Number(value) || 0) * 100) / 100;
 }
 
+function christianYear(value: unknown) {
+  let year = Number(value);
+  if (year < 100) year += 2000;
+  if (year > 2400) year -= 543;
+  return year;
+}
+
 function dateIso(value: unknown) {
   const raw = text(value);
   if (!raw) return null;
@@ -161,9 +168,7 @@ function dateIso(value: unknown) {
   if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
   const dmy = raw.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
   if (dmy) {
-    let year = Number(dmy[3]);
-    if (year < 100) year += 2000;
-    if (year > 2400) year -= 543;
+    const year = christianYear(dmy[3]);
     return `${year}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
   }
   const parsed = new Date(raw);
@@ -195,8 +200,9 @@ function thaiDateTime(value: unknown) {
   const raw = text(value);
   const match = raw.match(/(\d{1,2})\s+(\S+)\s+(\d{4})\s+-\s+(\d{1,2}:\d{2})(?::(\d{2}))?/);
   if (!match) return { date: null as string | null, time: null as string | null };
+  const year = christianYear(match[3]);
   return {
-    date: `${match[3]}-${months[match[2]] || "01"}-${match[1].padStart(2, "0")}`,
+    date: `${year}-${months[match[2]] || "01"}-${match[1].padStart(2, "0")}`,
     time: `${match[4]}:${match[5] || "00"}`
   };
 }

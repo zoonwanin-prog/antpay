@@ -13,6 +13,7 @@ import {
 import { AdminShell } from "@/components/admin-shell";
 import { getDashboardSummary } from "@/lib/dashboard";
 import { bangkokDate } from "@/lib/dates";
+import { getLatestRowDate } from "@/lib/repositories";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,9 @@ function SectionTitle({ icon, children }: { icon: React.ReactNode; children: Rea
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   await connection();
   const params = await searchParams;
-  const selectedDate = safeDate(params.date);
+  const selectedDate = params.date
+    ? safeDate(params.date)
+    : (await getLatestRowDate("bank_statement_daily", "date")) || bangkokDate();
   let summary: Awaited<ReturnType<typeof getDashboardSummary>> | null = null;
   let setupError = "";
   try {

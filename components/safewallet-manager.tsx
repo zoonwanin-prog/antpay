@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { CheckCircle2, Pencil, RotateCcw, Save, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
 import { TablePagination } from "@/components/table-pagination";
@@ -59,6 +59,15 @@ export function SafeWalletManager({
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"" | "ok" | "err">("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setRows(initialRows);
+    setSummaryRows(initialSummaryRows);
+    setMonthRows(initialMonthRows);
+    setCurrentTotalRows(totalRows);
+    setEditingId("");
+    setForm(emptyForm(date));
+  }, [initialRows, initialSummaryRows, initialMonthRows, totalRows, date]);
 
   const totals = useMemo(() => {
     const dayAmount = summaryRows.reduce((sum, row) => sum + safeAmount(row), 0);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { CheckCircle2, Landmark, Pencil, RotateCcw, Save, Trash2, TriangleAlert } from "lucide-react";
 import { TablePagination } from "@/components/table-pagination";
@@ -55,6 +55,14 @@ export function Bogo2PayManager({
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"" | "ok" | "err">("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setRows(initialRows);
+    setSummaryRows(initialSummaryRows);
+    setCurrentTotalRows(totalRows);
+    setEditingId("");
+    setForm(emptyForm(date));
+  }, [initialRows, initialSummaryRows, totalRows, date]);
 
   const computedNet = Number(form.net_amount || 0) || Number(form.actual_amount || 0) - Number(form.fee || 0);
   function updateField(name: keyof BogoForm, value: string) {

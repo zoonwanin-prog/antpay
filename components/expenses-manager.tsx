@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { CheckCircle2, Pencil, ReceiptText, RotateCcw, Save, Trash2, TriangleAlert } from "lucide-react";
 import { TablePagination } from "@/components/table-pagination";
@@ -64,6 +64,15 @@ export function ExpensesManager({
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"" | "ok" | "err">("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setRows(initialRows);
+    setSummaryRows(initialSummaryRows);
+    setMonthRows(initialMonthRows);
+    setCurrentTotalRows(totalRows);
+    setEditingId("");
+    setForm(emptyForm(date));
+  }, [initialRows, initialSummaryRows, initialMonthRows, totalRows, date]);
 
   const totals = useMemo(() => {
     const day = summaryRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);

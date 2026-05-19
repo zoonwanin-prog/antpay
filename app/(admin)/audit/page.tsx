@@ -15,6 +15,7 @@ import { AuditFailedList } from "@/components/audit-failed-list";
 import { AuditTelegramButton } from "@/components/audit-telegram-button";
 import { getAuditAccountBreakdown, getAuditData } from "@/lib/audit";
 import { bangkokDate } from "@/lib/dates";
+import { getLatestRowDate } from "@/lib/repositories";
 import type { AuditRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +71,9 @@ function emptyDayRow(date: string): AuditRow {
 export default async function AuditPage({ searchParams }: { searchParams: Promise<{ date?: string; month?: string }> }) {
   await connection();
   const params = await searchParams;
-  const date = normalizeDate(params.date);
+  const date = params.date
+    ? normalizeDate(params.date)
+    : (await getLatestRowDate("bank_statement_daily", "date")) || bangkokDate();
   const month = date.slice(0, 7);
 
   let audit: Awaited<ReturnType<typeof getAuditData>> | null = null;

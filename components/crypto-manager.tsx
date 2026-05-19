@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Bitcoin, CheckCircle2, CloudUpload, ImagePlus, Pencil, RotateCcw, Save, Trash2, TriangleAlert } from "lucide-react";
 import type { JsonRecord } from "@/lib/types";
@@ -101,6 +101,15 @@ export function CryptoManager({
   const [saving, setSaving] = useState(false);
   const [uploadingSlip, setUploadingSlip] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setRows(initialRows);
+    setSummaryRows(initialSummaryRows);
+    setAllRows(throughRows);
+    setCurrentTotalRows(totalRows);
+    setEditingId("");
+    setForm(emptyForm(date));
+  }, [initialRows, initialSummaryRows, throughRows, totalRows, date]);
 
   const computedUsdt = useMemo(() => {
     const amount = Number(form.amount_thb || 0);

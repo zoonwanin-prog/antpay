@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { CheckCircle2, Pencil, RotateCcw, Save, Trash2, TriangleAlert, WalletCards } from "lucide-react";
 import type { JsonRecord } from "@/lib/types";
@@ -74,6 +74,14 @@ export function BalancesManager({
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"" | "ok" | "err">("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setRows(initialRows);
+    setSummaryRows(initialSummaryRows);
+    setCurrentTotalRows(totalRows);
+    setEditingId("");
+    setForm(emptyForm(date));
+  }, [initialRows, initialSummaryRows, totalRows, date]);
 
   const totals = useMemo(() => {
     return summaryRows.reduce<{ system: number; bank: number; systemItems: JsonRecord[]; bankItems: JsonRecord[] }>(
