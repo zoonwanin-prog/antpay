@@ -120,8 +120,9 @@ async function getCryptoEntrySummary(row: JsonRecord): Promise<CryptoSummary> {
   if (!date) {
     return { buyUsdt: 0, buyThb: 0, withdrawUsdt: 0, withdrawThb: 0, transferUsdt: 0, transferThb: 0, balanceUsdt: 0, balanceThb: 0 };
   }
-  const [opening, dayRows] = await Promise.all([
+  const [opening, daySummary, dayRows] = await Promise.all([
     getCryptoSummaryUntil(prevDay(date)),
+    getCryptoSummaryUntil(date),
     listRowsByDate<JsonRecord>("crypto_transactions", "date", date)
   ]);
   const sortedRows = [...dayRows].sort((a, b) => cryptoOrderKey(a).localeCompare(cryptoOrderKey(b)));
@@ -145,17 +146,13 @@ async function getCryptoEntrySummary(row: JsonRecord): Promise<CryptoSummary> {
     balanceThb = round2(opening.cumulativeThb + signed.thb);
   }
 
-  const status = txt(row.status);
-  const rowUsdt = Number(row.usdt || 0);
-  const rowThb = Number(row.amount_thb || 0);
-
   return {
-    buyUsdt: status === "ซื้อ USDT" ? rowUsdt : 0,
-    buyThb: status === "ซื้อ USDT" ? rowThb : 0,
-    withdrawUsdt: status === "ถอน USDT" ? rowUsdt : 0,
-    withdrawThb: status === "ถอน USDT" ? rowThb : 0,
-    transferUsdt: status === "โอน USDT" ? rowUsdt : 0,
-    transferThb: status === "โอน USDT" ? rowThb : 0,
+    buyUsdt: daySummary.buyUsdt,
+    buyThb: daySummary.buyThb,
+    withdrawUsdt: daySummary.withdrawUsdt,
+    withdrawThb: daySummary.withdrawThb,
+    transferUsdt: daySummary.transferUsdt,
+    transferThb: daySummary.transferThb,
     balanceUsdt,
     balanceThb
   };
@@ -174,7 +171,7 @@ async function formatCryptoCaption(row: JsonRecord, mode: "create" | "update"): 
   lines.push(`💎 USDT: ${usdtShort.format(Number(row.usdt || 0))}`);
   if (Number(row.exchange_rate || 0)) lines.push(`📈 อัตรา: ${usdtShort.format(Number(row.exchange_rate || 0))}`);
   lines.push("--------------------------------");
-  lines.push(`📊 รายการนี้ (${displayDate(date)}):`);
+  lines.push(`📊 สรุปวันนี้ (${displayDate(date)}):`);
   lines.push(`• ซื้อ USDT: ${usdtShort.format(summary.buyUsdt)} USDT / ${money.format(summary.buyThb)} บาท`);
   lines.push(`• ถอน USDT: ${usdtShort.format(summary.withdrawUsdt)} USDT / ${money.format(summary.withdrawThb)} บาท`);
   lines.push(`• โอน USDT: ${usdtShort.format(summary.transferUsdt)} USDT / ${money.format(summary.transferThb)} บาท`);
