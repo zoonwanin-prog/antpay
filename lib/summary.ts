@@ -1,7 +1,7 @@
 import {
+  getCryptoSummaryUntil,
   listBalancesThroughMonth,
   listRowsByMonth,
-  listRowsThroughDate,
   listStatementDaily
 } from "@/lib/repositories";
 import { monthRange, normalizeMonth, round2 } from "@/lib/dates";
@@ -153,7 +153,7 @@ export async function getMonthlySummary(monthInput?: string | null): Promise<Mon
     boRows,
     transferRows,
     cryptoRows,
-    cryptoHistoryRows,
+    openingCryptoSummary,
     safeWalletRows,
     expenseRows,
     balanceRows
@@ -162,7 +162,7 @@ export async function getMonthlySummary(monthInput?: string | null): Promise<Mon
     listRowsByMonth<JsonRecord>("bogo2pay_transactions", "date", month),
     listRowsByMonth<JsonRecord>("transfers", "date", month),
     listRowsByMonth<JsonRecord>("crypto_transactions", "date", month),
-    listRowsThroughDate<JsonRecord>("crypto_transactions", "date", prevDay(start)),
+    getCryptoSummaryUntil(prevDay(start)),
     listRowsByMonth<JsonRecord>("safewallet_transactions", "date", month),
     listRowsByMonth<JsonRecord>("expenses", "date", month),
     listBalancesThroughMonth(month)
@@ -270,28 +270,8 @@ export async function getMonthlySummary(monthInput?: string | null): Promise<Mon
 
   const sortedDates = Array.from(dateKeys).filter((d) => d >= start && d < end).sort();
 
-  // previous-day cumulative crypto balance (from all history, anything <= start - 1)
-  const openingCrypto = cryptoHistoryRows
-    .reduce<{ usdt: number; thb: number }>((acc, row) => {
-      const status = String(row.status || "");
-      const usdt = Number(row.usdt || 0);
-      const thb = Number(row.amount_thb || 0);
-      if (status === "ซื้อ USDT") {
-        return {
-          usdt: acc.usdt + usdt,
-          thb: acc.thb + thb
-        };
-      }
-      if (status === "ขาย USDT" || status === "ถอน USDT" || status === "โอน USDT") {
-        return {
-          usdt: acc.usdt - usdt,
-          thb: acc.thb - thb
-        };
-      }
-      return acc;
-    }, { usdt: 0, thb: 0 });
-  let cumulativeUsdt = openingCrypto.usdt;
-  let cumulativeThb = openingCrypto.thb;
+  let cumulativeUsdt = openingCryptoSummary.cumulativeUsdt;
+  let cumulativeThb = openingCryptoSummary.cumulativeThb;
 
   let previousAccountBalance = sumBankAccountBalance(latestBalances, prevDay(start));
 

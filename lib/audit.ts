@@ -1,4 +1,11 @@
-import { listBalancesThroughMonth, listRowsByMonth, listStatementDaily, getFailedPayoutItemsByDate } from "@/lib/repositories";
+import {
+  getFailedPayoutItemsByDate,
+  listBalancesThroughMonth,
+  listMasterData,
+  listRowsByDate,
+  listRowsByMonth,
+  listStatementDaily
+} from "@/lib/repositories";
 import { normalizeMonth, round2 } from "@/lib/dates";
 import type { AuditRow, JsonRecord, StatementDailyRow } from "@/lib/types";
 
@@ -11,6 +18,9 @@ export type AuditAccountBreakdown = {
   fee: number;
   expectedBalance: number;
   endingBalance: number;
+  actualBalance: number;
+  balanceAccountNames: string[];
+  hasActualBalance: boolean;
   diff: number;
 };
 
@@ -21,7 +31,11 @@ export type AuditAccountBreakdown = {
  */
 export async function getAuditAccountBreakdown(date: string): Promise<AuditAccountBreakdown[]> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
-  const statementRows = await listStatementDaily(date.slice(0, 7));
+  const [statementRows, balanceRows, masterData] = await Promise.all([
+    listStatementDaily(date.slice(0, 7)),
+    listRowsByDate<JsonRecord>("balances", "date", date),
+    listMasterData()
+  ]);
   const dayRows = statementRows.filter((row) => row.date === date);
   const priorRows = statementRows.filter((row) => row.date < date);
 
@@ -30,6 +44,32 @@ export async function getAuditAccountBreakdown(date: string): Promise<AuditAccou
   for (const row of priorRows as StatementDailyRow[]) {
     const key = `${row.bank}|${row.account_no}`;
     openingMap.set(key, Number(row.ending_balance || 0));
+  }
+
+  const accountNoByBalanceName = buildAccountNoByBalanceName(masterData.bankAccounts);
+
+  const actualByAccountNo = new Map<string, { amount: number; names: Set<string> }>();
+  const latestBalances = new Map<string, { accountNo: string; name: string; amount: number; order: string }>();
+  for (const row of balanceRows) {
+    const type = String(row.balance_type || "").trim();
+    if (type !== "บัญชีฝาก" && type !== "บัญชีถอน") continue;
+    const name = String(row.account_name || "").trim();
+    if (!name) continue;
+    const mappedAccountNo = accountNoByBalanceName.get(normalizeKey(name));
+    const accountNo = mappedAccountNo || normalizeAccountNo(name);
+    if (!accountNo) continue;
+    const key = `${accountNo}|${type}|${normalizeKey(name)}`;
+    const order = `${row.date || ""} ${row.time || ""} ${row.created_at || ""}`;
+    const previous = latestBalances.get(key);
+    if (!previous || previous.order < order) {
+      latestBalances.set(key, { accountNo, name, amount: Number(row.amount || 0), order });
+    }
+  }
+  for (const item of latestBalances.values()) {
+    const current = actualByAccountNo.get(item.accountNo) || { amount: 0, names: new Set<string>() };
+    current.amount = round2(current.amount + item.amount);
+    current.names.add(item.name);
+    actualByAccountNo.set(item.accountNo, current);
   }
 
   const results: AuditAccountBreakdown[] = [];
@@ -41,33 +81,60 @@ export async function getAuditAccountBreakdown(date: string): Promise<AuditAccou
     const fee = Number(row.fee_total || 0);
     const ending = Number(row.ending_balance || 0);
     const expected = opening + deposit - withdraw;
+    const accountNo = String(row.account_no || "");
+    const actual = actualByAccountNo.get(normalizeAccountNo(accountNo));
+    const actualBalance = actual ? actual.amount : 0;
     results.push({
       bank: String(row.bank || ""),
-      accountNo: String(row.account_no || ""),
+      accountNo,
       openingBalance: round2(opening),
       deposit: round2(deposit),
       withdraw: round2(withdraw),
       fee: round2(fee),
       expectedBalance: round2(expected),
       endingBalance: round2(ending),
-      diff: round2(ending - expected)
+      actualBalance: round2(actualBalance),
+      balanceAccountNames: actual ? Array.from(actual.names).sort() : [],
+      hasActualBalance: Boolean(actual),
+      diff: round2(actualBalance - expected)
     });
   }
   return results;
+}
+
+function normalizeKey(value: unknown): string {
+  return String(value || "").replace(/\s+/g, "").toLowerCase();
+}
+
+function normalizeAccountNo(value: unknown): string {
+  return String(value || "").replace(/\D/g, "");
 }
 
 function add(map: Record<string, number>, date: string, value: number) {
   map[date] = round2((map[date] || 0) + value);
 }
 
-function latestActualBalances(rows: JsonRecord[]): Record<string, number> {
+function buildAccountNoByBalanceName(bankAccounts: JsonRecord[]): Map<string, string> {
+  const accountNoByBalanceName = new Map<string, string>();
+  for (const account of bankAccounts) {
+    const accountName = normalizeKey(account.name);
+    const accountNo = normalizeAccountNo(account.account_no);
+    if (accountName && accountNo) accountNoByBalanceName.set(accountName, accountNo);
+  }
+  return accountNoByBalanceName;
+}
+
+function latestActualBalances(rows: JsonRecord[], accountNoByBalanceName?: Map<string, string>): Record<string, number> {
   const latestByKey = new Map<string, { date: string; amount: number; order: string }>();
   for (const row of rows) {
     const date = String(row.date || "").slice(0, 10);
     const account = String(row.account_name || "").trim();
     const type = String(row.balance_type || "").trim();
     if (!date || !account || (type !== "บัญชีฝาก" && type !== "บัญชีถอน")) continue;
-    latestByKey.set(`${date}|${account}|${type}`, {
+    const mappedAccountNo = accountNoByBalanceName?.get(normalizeKey(account));
+    const accountNo = mappedAccountNo || normalizeAccountNo(account);
+    if (accountNoByBalanceName && !accountNo) continue;
+    latestByKey.set(`${date}|${accountNo || account}|${type}`, {
       date,
       amount: Number(row.amount || 0),
       order: `${date} ${row.time || ""} ${row.created_at || ""}`
@@ -78,9 +145,9 @@ function latestActualBalances(rows: JsonRecord[]): Record<string, number> {
   return byDate;
 }
 
-function previousBalance(date: string, actualByDate: Record<string, number>): number {
-  const candidates = Object.keys(actualByDate).filter((key) => key < date).sort();
-  if (candidates.length) return actualByDate[candidates[candidates.length - 1]] || 0;
+function previousStatementBalance(date: string, bankByDate: Record<string, { balance: number }>): number {
+  const candidates = Object.keys(bankByDate).filter((key) => key < date).sort();
+  if (candidates.length) return bankByDate[candidates[candidates.length - 1]]?.balance || 0;
   return 0;
 }
 
@@ -93,7 +160,8 @@ export async function getAuditData(monthInput?: string | null) {
     balanceRows,
     transferRows,
     cryptoRows,
-    failedPayout
+    failedPayout,
+    masterData
   ] = await Promise.all([
     listStatementDaily(month),
     listRowsByMonth<JsonRecord>("bogo2pay_transactions", "date", month),
@@ -101,7 +169,8 @@ export async function getAuditData(monthInput?: string | null) {
     listBalancesThroughMonth(month),
     listRowsByMonth<JsonRecord>("transfers", "date", month),
     listRowsByMonth<JsonRecord>("crypto_transactions", "date", month),
-    getFailedPayoutItemsByDate(month)
+    getFailedPayoutItemsByDate(month),
+    listMasterData()
   ]);
 
   const dateKeys = new Set<string>();
@@ -145,7 +214,7 @@ export async function getAuditData(monthInput?: string | null) {
     add(expenses, date, Number(row.amount || 0));
   }
 
-  const actualByDate = latestActualBalances(balanceRows);
+  const actualByDate = latestActualBalances(balanceRows, buildAccountNoByBalanceName(masterData.bankAccounts));
   Object.keys(actualByDate).filter((date) => date.startsWith(month)).forEach((date) => dateKeys.add(date));
 
   for (const row of transferRows) {
@@ -175,7 +244,7 @@ export async function getAuditData(monthInput?: string | null) {
   const rows: AuditRow[] = Array.from(dateKeys).sort().map((date) => {
     const bank = bankByDate[date] || { deposit: 0, withdraw: 0, fee: 0, balance: 0 };
     const actualBalance = Object.prototype.hasOwnProperty.call(actualByDate, date) ? actualByDate[date] : 0;
-    const openingBalance = previousBalance(date, actualByDate);
+    const openingBalance = previousStatementBalance(date, bankByDate);
     const expectedBalance = openingBalance + bank.deposit - bank.withdraw;
     const diffBank = actualBalance - expectedBalance;
     const diffDeposit = bank.deposit - (boDeposit[date] || 0);

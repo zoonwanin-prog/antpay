@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { bangkokDate, monthRange, round2 } from "@/lib/dates";
 import { fetchStatementRows, isFailedStatus, normalizeBankStatementRow } from "@/lib/statement";
-import type { AuditDetail, JsonRecord, StatementDailyRow } from "@/lib/types";
+import type { AuditDetail, CryptoSummaryUntil, JsonRecord, StatementDailyRow } from "@/lib/types";
 
 const SUPABASE_PAGE_SIZE = 1000;
 
@@ -188,6 +188,91 @@ export async function listRowsThroughDate<T extends JsonRecord>(table: string, d
       .order("created_at", { ascending: true }),
     table
   );
+}
+
+function emptyCryptoSummary(date: string): CryptoSummaryUntil {
+  return {
+    date,
+    buyUsdt: 0,
+    buyThb: 0,
+    withdrawUsdt: 0,
+    withdrawThb: 0,
+    transferUsdt: 0,
+    transferThb: 0,
+    sellUsdt: 0,
+    sellThb: 0,
+    cumulativeUsdt: 0,
+    cumulativeThb: 0,
+    count: 0
+  };
+}
+
+function numberFromRpc(row: JsonRecord, key: string): number {
+  return Number(row[key] || 0);
+}
+
+function buildCryptoSummaryFromRows(date: string, rows: JsonRecord[]): CryptoSummaryUntil {
+  const summary = emptyCryptoSummary(date);
+  for (const row of rows) {
+    const rowDate = String(row.date || "").slice(0, 10);
+    const status = String(row.status || "");
+    const usdt = Number(row.usdt || 0);
+    const thb = Number(row.amount_thb || 0);
+    if (rowDate === date) {
+      summary.count += 1;
+      if (status === "ซื้อ USDT") {
+        summary.buyUsdt = round2(summary.buyUsdt + usdt);
+        summary.buyThb = round2(summary.buyThb + thb);
+      } else if (status === "ถอน USDT") {
+        summary.withdrawUsdt = round2(summary.withdrawUsdt + usdt);
+        summary.withdrawThb = round2(summary.withdrawThb + thb);
+      } else if (status === "โอน USDT") {
+        summary.transferUsdt = round2(summary.transferUsdt + usdt);
+        summary.transferThb = round2(summary.transferThb + thb);
+      } else if (status === "ขาย USDT") {
+        summary.sellUsdt = round2(summary.sellUsdt + usdt);
+        summary.sellThb = round2(summary.sellThb + thb);
+      }
+    }
+
+    if (status === "ซื้อ USDT") {
+      summary.cumulativeUsdt = round2(summary.cumulativeUsdt + usdt);
+      summary.cumulativeThb = round2(summary.cumulativeThb + thb);
+    } else if (status === "ขาย USDT" || status === "ถอน USDT" || status === "โอน USDT") {
+      summary.cumulativeUsdt = round2(summary.cumulativeUsdt - usdt);
+      summary.cumulativeThb = round2(summary.cumulativeThb - thb);
+    }
+  }
+  return summary;
+}
+
+export async function getCryptoSummaryUntil(date: string): Promise<CryptoSummaryUntil> {
+  const safeDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : bangkokDate();
+  const { data, error } = await getSupabaseAdmin().rpc("crypto_summary_until", { target_date: safeDate });
+  if (!error) {
+    const row = Array.isArray(data) ? (data[0] as JsonRecord | undefined) : (data as JsonRecord | null);
+    if (!row) return emptyCryptoSummary(safeDate);
+    return {
+      date: safeDate,
+      buyUsdt: round2(numberFromRpc(row, "buy_usdt")),
+      buyThb: round2(numberFromRpc(row, "buy_thb")),
+      withdrawUsdt: round2(numberFromRpc(row, "withdraw_usdt")),
+      withdrawThb: round2(numberFromRpc(row, "withdraw_thb")),
+      transferUsdt: round2(numberFromRpc(row, "transfer_usdt")),
+      transferThb: round2(numberFromRpc(row, "transfer_thb")),
+      sellUsdt: round2(numberFromRpc(row, "sell_usdt")),
+      sellThb: round2(numberFromRpc(row, "sell_thb")),
+      cumulativeUsdt: round2(numberFromRpc(row, "cumulative_usdt")),
+      cumulativeThb: round2(numberFromRpc(row, "cumulative_thb")),
+      count: numberFromRpc(row, "day_count")
+    };
+  }
+
+  if (!/function .*crypto_summary_until|schema cache|Could not find|does not exist|PGRST202/i.test(error.message)) {
+    throw new Error(`crypto_summary_until: ${error.message}`);
+  }
+  const rows = await listRowsThroughDate<JsonRecord>("crypto_transactions", "date", safeDate);
+  return buildCryptoSummaryFromRows(safeDate, rows);
 }
 
 export async function listBalancesThroughMonth(month: string): Promise<JsonRecord[]> {

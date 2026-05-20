@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { CalendarRange, RefreshCw } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { CryptoManager } from "@/components/crypto-manager";
-import { getLatestRowDate, listLatestRowsPage, listMasterData, listRowsByDate, listRowsThroughDate } from "@/lib/repositories";
+import { getCryptoSummaryUntil, getLatestRowDate, listLatestRowsPage, listMasterData, listRowsByDate } from "@/lib/repositories";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +27,10 @@ export default async function CryptoPage({ searchParams }: { searchParams: Promi
   const params = await searchParams;
   const date = params.date ? normalizeDate(params.date) : (await getLatestRowDate("crypto_transactions", "date")) || today;
   const page = normalizePage(params.page);
-  const [summaryRows, pagedRows, throughRows, masterData] = await Promise.all([
+  const [summaryRows, pagedRows, cryptoSummary, masterData] = await Promise.all([
     listRowsByDate("crypto_transactions", "date", date),
     listLatestRowsPage("crypto_transactions", "date", page, 20),
-    listRowsThroughDate("crypto_transactions", "date", date),
+    getCryptoSummaryUntil(date),
     listMasterData()
   ]);
   return (
@@ -53,7 +53,7 @@ export default async function CryptoPage({ searchParams }: { searchParams: Promi
       <CryptoManager
         rows={pagedRows.rows}
         summaryRows={summaryRows}
-        throughRows={throughRows}
+        cryptoSummary={cryptoSummary}
         date={date}
         page={pagedRows.page}
         pageCount={pagedRows.pageCount}

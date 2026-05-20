@@ -2062,6 +2062,10 @@ button:disabled,
   grid-template-columns: repeat(2, minmax(280px, 1fr));
 }
 
+.bogo-summary-grid {
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+}
+
 .crypto-summary-grid {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
@@ -2158,13 +2162,17 @@ button:disabled,
 }
 
 .safewallet-inline-total strong {
-  color: var(--green);
+  color: var(--primary);
   font-size: 25px;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .safewallet-inline-total span:nth-child(2) strong {
+  color: var(--green);
+}
+
+.safewallet-inline-total span:nth-child(3) strong {
   color: var(--orange);
 }
 
@@ -3491,6 +3499,7 @@ button:disabled,
   .bot-ops-grid,
   .statement-tools-grid,
   .import-summary-grid,
+  .bogo-summary-grid,
   .transfer-summary-grid,
   .crypto-summary-grid,
   .balance-summary-grid,

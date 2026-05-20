@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Bitcoin, CheckCircle2, CloudUpload, ImagePlus, Pencil, RotateCcw, Save, Trash2, TriangleAlert } from "lucide-react";
-import type { JsonRecord } from "@/lib/types";
+import type { CryptoSummaryUntil, JsonRecord } from "@/lib/types";
 import { TablePagination } from "@/components/table-pagination";
 import { uploadFileToDrive } from "@/lib/google-drive-client";
 
@@ -57,20 +58,10 @@ function optionValue(option: MasterOption) {
   return option.name || option.username || "";
 }
 
-function signedUsdt(row: JsonRecord) {
-  const usdt = Number(row.usdt || 0);
-  return row.status === "ซื้อ USDT" ? usdt : -usdt;
-}
-
-function signedThb(row: JsonRecord) {
-  const thb = Number(row.amount_thb || 0);
-  return row.status === "ซื้อ USDT" ? thb : -thb;
-}
-
 export function CryptoManager({
   rows: initialRows,
   summaryRows: initialSummaryRows,
-  throughRows,
+  cryptoSummary,
   date,
   page,
   pageCount,
@@ -81,7 +72,7 @@ export function CryptoManager({
 }: {
   rows: JsonRecord[];
   summaryRows: JsonRecord[];
-  throughRows: JsonRecord[];
+  cryptoSummary: CryptoSummaryUntil;
   date: string;
   page: number;
   pageCount: number;
@@ -90,9 +81,9 @@ export function CryptoManager({
   cryptoAccounts: MasterOption[];
   users: MasterOption[];
 }) {
+  const router = useRouter();
   const [rows, setRows] = useState<JsonRecord[]>(initialRows);
   const [summaryRows, setSummaryRows] = useState<JsonRecord[]>(initialSummaryRows);
-  const [allRows, setAllRows] = useState<JsonRecord[]>(throughRows);
   const [currentTotalRows, setCurrentTotalRows] = useState(totalRows);
   const [form, setForm] = useState<CryptoForm>(() => emptyForm(date));
   const [editingId, setEditingId] = useState("");
@@ -105,11 +96,10 @@ export function CryptoManager({
   useEffect(() => {
     setRows(initialRows);
     setSummaryRows(initialSummaryRows);
-    setAllRows(throughRows);
     setCurrentTotalRows(totalRows);
     setEditingId("");
     setForm(emptyForm(date));
-  }, [initialRows, initialSummaryRows, throughRows, totalRows, date]);
+  }, [initialRows, initialSummaryRows, totalRows, date]);
 
   const computedUsdt = useMemo(() => {
     const amount = Number(form.amount_thb || 0);
@@ -143,16 +133,14 @@ export function CryptoManager({
       },
       { buyUsdt: 0, buyThb: 0, withdrawUsdt: 0, withdrawThb: 0, transferUsdt: 0, transferThb: 0 }
     );
-    const balance = allRows.reduce<{ usdt: number; thb: number }>(
-      (sum, row) => {
-        sum.usdt += signedUsdt(row);
-        sum.thb += signedThb(row);
-        return sum;
-      },
-      { usdt: 0, thb: 0 }
-    );
-    return { ...dayTotals, balanceUsdt: balance.usdt, balanceThb: balance.thb };
-  }, [summaryRows, allRows]);
+    return {
+      ...dayTotals,
+      sellUsdt: cryptoSummary.sellUsdt,
+      sellThb: cryptoSummary.sellThb,
+      balanceUsdt: cryptoSummary.cumulativeUsdt,
+      balanceThb: cryptoSummary.cumulativeThb
+    };
+  }, [summaryRows, cryptoSummary]);
 
   function updateField(name: keyof CryptoForm, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -227,10 +215,10 @@ export function CryptoManager({
         }
         return nextDate === date ? [nextRow, ...current] : current;
       });
-      setAllRows((current) => (editingId ? current.map((row) => (row.id === editingId ? json.row : row)) : [...current, json.row]));
       setStatus("ok");
       setMessage(editingId ? "แก้ไขรายการสำเร็จ" : "บันทึกรายการสำเร็จ");
       resetForm();
+      router.refresh();
     } catch (error) {
       setStatus("err");
       setMessage(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ");
@@ -275,10 +263,10 @@ export function CryptoManager({
       setRows((current) => current.filter((item) => item.id !== id));
       setCurrentTotalRows((current) => Math.max(0, current - 1));
       setSummaryRows((current) => current.filter((item) => item.id !== id));
-      setAllRows((current) => current.filter((item) => item.id !== id));
       if (editingId === id) resetForm();
       setStatus("ok");
       setMessage("ลบรายการสำเร็จ");
+      router.refresh();
     } catch (error) {
       setStatus("err");
       setMessage(error instanceof Error ? error.message : "ลบไม่สำเร็จ");

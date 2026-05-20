@@ -221,7 +221,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         <div className="panel-header">
           <div>
             <h2><Layers size={16} /> แยกรายบัญชี</h2>
-            <p>ยอดแต่ละบัญชีจาก bank_statement_daily ของวันที่เลือก</p>
+            <p>เทียบ Statement รายบัญชีกับยอดจริงจากหน้า ยอดคงเหลือ</p>
           </div>
         </div>
         {breakdown.length === 0 ? (
@@ -241,8 +241,14 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                   <div className="summary-split-row"><span>Fee Statement</span><strong>{money.format(acc.fee)}</strong></div>
                   <div className="summary-split-row"><span>เงินควรเหลือ</span><strong>{money.format(acc.expectedBalance)}</strong></div>
                   <div className="summary-split-row"><span>ยอดคงเหลือ Statement</span><strong>{money.format(acc.endingBalance)}</strong></div>
+                  <div className="summary-split-row"><span>เงินในบัญชีจริง</span><strong>{money.format(acc.actualBalance)}</strong></div>
                   <div className="summary-split-row"><span>Diff บัญชี</span><strong className="audit-diff-value">{money.format(acc.diff)}</strong></div>
                 </div>
+                <p className="audit-calc-note">
+                  {acc.hasActualBalance
+                    ? `ยอดจริงจาก: ${acc.balanceAccountNames.join(", ")}`
+                    : "ยังไม่พบ mapping account_name ในยอดคงเหลือสำหรับบัญชีนี้"}
+                </p>
               </div>
             ))}
           </div>

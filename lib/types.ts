@@ -62,6 +62,21 @@ export type AuditRow = {
   status: string;
 };
 
+export type CryptoSummaryUntil = {
+  date: string;
+  buyUsdt: number;
+  buyThb: number;
+  withdrawUsdt: number;
+  withdrawThb: number;
+  transferUsdt: number;
+  transferThb: number;
+  sellUsdt: number;
+  sellThb: number;
+  cumulativeUsdt: number;
+  cumulativeThb: number;
+  count: number;
+};
+
 export type TelegramTarget = {
   chatId: string;
   threadId?: string;

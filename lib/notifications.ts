@@ -1,5 +1,5 @@
 import { downloadDriveFile, extractDriveFileId } from "@/lib/google-drive";
-import { listRowsByDate, listRowsThroughDate } from "@/lib/repositories";
+import { getCryptoSummaryUntil, listRowsByDate } from "@/lib/repositories";
 import {
   sendTelegram,
   sendTelegramDocument,
@@ -85,52 +85,17 @@ async function getCryptoSummary(row: JsonRecord): Promise<CryptoSummary> {
   if (!date) {
     return { buyUsdt: 0, buyThb: 0, withdrawUsdt: 0, withdrawThb: 0, transferUsdt: 0, transferThb: 0, balanceUsdt: 0, balanceThb: 0 };
   }
-  const rows = await listRowsThroughDate<JsonRecord>("crypto_transactions", "date", date);
-  let buyUsdt = 0;
-  let buyThb = 0;
-  let withdrawUsdt = 0;
-  let withdrawThb = 0;
-  let transferUsdt = 0;
-  let transferThb = 0;
-  let balanceUsdt = 0;
-  let balanceThb = 0;
-
-  for (const item of rows) {
-    const itemDate = txt(item.date).slice(0, 10);
-    const status = txt(item.status);
-    const itemUsdt = Number(item.usdt || 0);
-    const itemThb = Number(item.amount_thb || 0);
-    if (itemDate === date) {
-      if (status === "ซื้อ USDT") {
-        buyUsdt += itemUsdt;
-        buyThb += itemThb;
-      } else if (status === "ถอน USDT") {
-        withdrawUsdt += itemUsdt;
-        withdrawThb += itemThb;
-      } else if (status === "โอน USDT") {
-        transferUsdt += itemUsdt;
-        transferThb += itemThb;
-      }
-    }
-
-    if (status === "ซื้อ USDT") {
-      balanceUsdt += itemUsdt;
-      balanceThb += itemThb;
-    } else if (status === "ถอน USDT" || status === "โอน USDT" || status === "ขาย USDT") {
-      balanceUsdt -= itemUsdt;
-      balanceThb -= itemThb;
-    }
-  }
+  const summary = await getCryptoSummaryUntil(date);
 
   return {
-    buyUsdt,
-    buyThb,
-    withdrawUsdt,
-    withdrawThb,
-    transferUsdt,
-    transferThb,
-    balanceUsdt,
-    balanceThb
+    buyUsdt: summary.buyUsdt,
+    buyThb: summary.buyThb,
+    withdrawUsdt: summary.withdrawUsdt,
+    withdrawThb: summary.withdrawThb,
+    transferUsdt: summary.transferUsdt,
+    transferThb: summary.transferThb,
+    balanceUsdt: summary.cumulativeUsdt,
+    balanceThb: summary.cumulativeThb
   };
 }
 

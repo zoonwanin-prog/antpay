@@ -159,6 +159,8 @@ export function Bogo2PayManager({
 
   return (
     <div className="section-stack">
+      <BogoSummary rows={summaryRows} date={date} />
+
       <section className="transfer-form-heading">
         <span aria-hidden="true"><Landmark size={23} /></span>
         <h2>{editingId ? "แก้ไขธุรกรรม BoGo2pay" : "ธุรกรรม BoGo2pay"}</h2>
@@ -190,7 +192,6 @@ export function Bogo2PayManager({
         </div>
       </section>
 
-      <BogoSummary rows={summaryRows} date={date} />
       <BogoTable rows={rows} date={date} page={page} pageCount={pageCount} totalRows={currentTotalRows} onEdit={startEdit} onDelete={deleteRow} />
     </div>
   );
@@ -217,7 +218,7 @@ function BogoSummary({ rows, date }: { rows: JsonRecord[]; date: string }) {
   );
   const dayLabel = formatThaiDate(date);
   return (
-    <section className="grid compact-card-grid transfer-summary-grid">
+    <section className="grid compact-card-grid bogo-summary-grid">
       <div className="card metric-card compact-card transfer-summary-card tone-good">
         <p className="metric">ฝาก BoGo2pay ({dayLabel})</p>
         <p className="value">{money.format(totals.depositAmount)}</p>

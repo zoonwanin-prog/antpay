@@ -186,6 +186,7 @@ export function SafeWalletManager({
         <div className="card metric-card compact-card transfer-summary-card safewallet-month-summary">
           <p className="metric">SafeWallet เดือนนี้ ({date.slice(5, 7)}/{date.slice(0, 4)})</p>
           <div className="safewallet-inline-total">
+            <span>AMOUNT <strong>{money.format(totals.monthAmount)}</strong> บาท</span>
             <span>NET <strong>{money.format(totals.monthNet)}</strong> บาท</span>
             <span>ค่าธรรมเนียม <strong>{money.format(totals.monthFee)}</strong> บาท</span>
           </div>

@@ -1,11 +1,11 @@
 import { bangkokDate, round2 } from "@/lib/dates";
 import {
+  getCryptoSummaryUntil,
   listRecentRows,
   listRowsByDate,
-  listRowsThroughDate,
   listStatementDailyByDate
 } from "@/lib/repositories";
-import type { SummaryCryptoRow, SummaryDayRow } from "@/lib/summary";
+import type { SummaryDayRow } from "@/lib/summary";
 import type { AuditRow, JsonRecord, StatementDailyRow } from "@/lib/types";
 
 type LatestBalance = { date: string; account: string; type: string; amount: number; order: string };
@@ -58,65 +58,12 @@ function sumStatementRows(statementRows: StatementDailyRow[]) {
   );
 }
 
-function buildCryptoDay(targetDate: string, cryptoHistoryRows: JsonRecord[]): SummaryCryptoRow {
-  const day = {
-    buyUsdt: 0,
-    buyThb: 0,
-    withdrawUsdt: 0,
-    withdrawThb: 0,
-    transferUsdt: 0,
-    transferThb: 0,
-    sellUsdt: 0,
-    sellThb: 0
-  };
-  let cumulativeUsdt = 0;
-  let cumulativeThb = 0;
-
-  for (const row of cryptoHistoryRows) {
-    const date = String(row.date || "").slice(0, 10);
-    const status = String(row.status || "");
-    const usdt = Number(row.usdt || 0);
-    const thb = Number(row.amount_thb || 0);
-
-    if (date === targetDate) {
-      if (status === "ซื้อ USDT") {
-        day.buyUsdt = round2(day.buyUsdt + usdt);
-        day.buyThb = round2(day.buyThb + thb);
-      } else if (status === "ถอน USDT") {
-        day.withdrawUsdt = round2(day.withdrawUsdt + usdt);
-        day.withdrawThb = round2(day.withdrawThb + thb);
-      } else if (status === "โอน USDT") {
-        day.transferUsdt = round2(day.transferUsdt + usdt);
-        day.transferThb = round2(day.transferThb + thb);
-      } else if (status === "ขาย USDT") {
-        day.sellUsdt = round2(day.sellUsdt + usdt);
-        day.sellThb = round2(day.sellThb + thb);
-      }
-    }
-
-    if (status === "ซื้อ USDT") {
-      cumulativeUsdt = round2(cumulativeUsdt + usdt);
-      cumulativeThb = round2(cumulativeThb + thb);
-    } else if (status === "ขาย USDT" || status === "ถอน USDT" || status === "โอน USDT") {
-      cumulativeUsdt = round2(cumulativeUsdt - usdt);
-      cumulativeThb = round2(cumulativeThb - thb);
-    }
-  }
-
-  return {
-    date: targetDate,
-    ...day,
-    cumulativeUsdt: round2(cumulativeUsdt),
-    cumulativeThb: round2(cumulativeThb)
-  };
-}
-
 export async function getDashboardSummary(targetDate = bangkokDate()) {
   const [
     statementRows,
     boRows,
     transferRows,
-    cryptoHistoryRows,
+    cryptoDay,
     safeWalletRows,
     expenseRows,
     balanceRows,
@@ -125,7 +72,7 @@ export async function getDashboardSummary(targetDate = bangkokDate()) {
     listStatementDailyByDate(targetDate),
     listRowsByDate<JsonRecord>("bogo2pay_transactions", "date", targetDate),
     listRowsByDate<JsonRecord>("transfers", "date", targetDate),
-    listRowsThroughDate<JsonRecord>("crypto_transactions", "date", targetDate),
+    getCryptoSummaryUntil(targetDate),
     listRowsByDate<JsonRecord>("safewallet_transactions", "date", targetDate),
     listRowsByDate<JsonRecord>("expenses", "date", targetDate),
     listRowsByDate<JsonRecord>("balances", "date", targetDate),
@@ -182,7 +129,6 @@ export async function getDashboardSummary(targetDate = bangkokDate()) {
   }
 
   const expense = round2(expenseRows.reduce((total, row) => total + Number(row.amount || 0), 0));
-  const cryptoDay = buildCryptoDay(targetDate, cryptoHistoryRows);
   moveTotal = round2(moveTotal + cryptoDay.buyThb);
 
   const summaryDay: SummaryDayRow = {
@@ -275,7 +221,7 @@ export async function getDashboardSummary(targetDate = bangkokDate()) {
     monthTotals: {},
     counts: {
       transfers: transferRows.length,
-      cryptoTransactions: cryptoHistoryRows.filter((row) => String(row.date || "").slice(0, 10) === targetDate).length,
+      cryptoTransactions: cryptoDay.count,
       expenses: expenseRows.length
     }
   };
