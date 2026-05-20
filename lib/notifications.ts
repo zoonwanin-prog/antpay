@@ -120,17 +120,39 @@ async function getCryptoEntrySummary(row: JsonRecord): Promise<CryptoSummary> {
   if (!date) {
     return { buyUsdt: 0, buyThb: 0, withdrawUsdt: 0, withdrawThb: 0, transferUsdt: 0, transferThb: 0, balanceUsdt: 0, balanceThb: 0 };
   }
-  const [opening, daySummary, dayRows] = await Promise.all([
+  const [opening, dayRows] = await Promise.all([
     getCryptoSummaryUntil(prevDay(date)),
-    getCryptoSummaryUntil(date),
     listRowsByDate<JsonRecord>("crypto_transactions", "date", date)
   ]);
   const sortedRows = [...dayRows].sort((a, b) => cryptoOrderKey(a).localeCompare(cryptoOrderKey(b)));
+  const summary: CryptoSummary = {
+    buyUsdt: 0,
+    buyThb: 0,
+    withdrawUsdt: 0,
+    withdrawThb: 0,
+    transferUsdt: 0,
+    transferThb: 0,
+    balanceUsdt: opening.cumulativeUsdt,
+    balanceThb: opening.cumulativeThb
+  };
   let balanceUsdt = opening.cumulativeUsdt;
   let balanceThb = opening.cumulativeThb;
   let found = false;
 
   for (const item of sortedRows) {
+    const status = txt(item.status);
+    const itemUsdt = Number(item.usdt || 0);
+    const itemThb = Number(item.amount_thb || 0);
+    if (status === "ซื้อ USDT") {
+      summary.buyUsdt = round2(summary.buyUsdt + itemUsdt);
+      summary.buyThb = round2(summary.buyThb + itemThb);
+    } else if (status === "ถอน USDT") {
+      summary.withdrawUsdt = round2(summary.withdrawUsdt + itemUsdt);
+      summary.withdrawThb = round2(summary.withdrawThb + itemThb);
+    } else if (status === "โอน USDT") {
+      summary.transferUsdt = round2(summary.transferUsdt + itemUsdt);
+      summary.transferThb = round2(summary.transferThb + itemThb);
+    }
     const signed = signedCrypto(item);
     balanceUsdt = round2(balanceUsdt + signed.usdt);
     balanceThb = round2(balanceThb + signed.thb);
@@ -141,21 +163,25 @@ async function getCryptoEntrySummary(row: JsonRecord): Promise<CryptoSummary> {
   }
 
   if (!found) {
+    const status = txt(row.status);
+    const rowUsdt = Number(row.usdt || 0);
+    const rowThb = Number(row.amount_thb || 0);
+    if (status === "ซื้อ USDT") {
+      summary.buyUsdt = round2(summary.buyUsdt + rowUsdt);
+      summary.buyThb = round2(summary.buyThb + rowThb);
+    } else if (status === "ถอน USDT") {
+      summary.withdrawUsdt = round2(summary.withdrawUsdt + rowUsdt);
+      summary.withdrawThb = round2(summary.withdrawThb + rowThb);
+    } else if (status === "โอน USDT") {
+      summary.transferUsdt = round2(summary.transferUsdt + rowUsdt);
+      summary.transferThb = round2(summary.transferThb + rowThb);
+    }
     const signed = signedCrypto(row);
     balanceUsdt = round2(opening.cumulativeUsdt + signed.usdt);
     balanceThb = round2(opening.cumulativeThb + signed.thb);
   }
 
-  return {
-    buyUsdt: daySummary.buyUsdt,
-    buyThb: daySummary.buyThb,
-    withdrawUsdt: daySummary.withdrawUsdt,
-    withdrawThb: daySummary.withdrawThb,
-    transferUsdt: daySummary.transferUsdt,
-    transferThb: daySummary.transferThb,
-    balanceUsdt,
-    balanceThb
-  };
+  return { ...summary, balanceUsdt, balanceThb };
 }
 
 async function formatCryptoCaption(row: JsonRecord, mode: "create" | "update"): Promise<string> {
@@ -171,7 +197,7 @@ async function formatCryptoCaption(row: JsonRecord, mode: "create" | "update"): 
   lines.push(`💎 USDT: ${usdtShort.format(Number(row.usdt || 0))}`);
   if (Number(row.exchange_rate || 0)) lines.push(`📈 อัตรา: ${usdtShort.format(Number(row.exchange_rate || 0))}`);
   lines.push("--------------------------------");
-  lines.push(`📊 สรุปวันนี้ (${displayDate(date)}):`);
+  lines.push(`📊 สรุปถึงรายการนี้ (${displayDate(date)}):`);
   lines.push(`• ซื้อ USDT: ${usdtShort.format(summary.buyUsdt)} USDT / ${money.format(summary.buyThb)} บาท`);
   lines.push(`• ถอน USDT: ${usdtShort.format(summary.withdrawUsdt)} USDT / ${money.format(summary.withdrawThb)} บาท`);
   lines.push(`• โอน USDT: ${usdtShort.format(summary.transferUsdt)} USDT / ${money.format(summary.transferThb)} บาท`);
