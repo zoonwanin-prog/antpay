@@ -89,7 +89,7 @@ export function BalancesManager({
         const amount = Number(row.amount || 0);
         const type = text(row.balance_type);
         if (type === "ระบบ") {
-          sum.system += amount;
+          if (isMainOrPayout(row)) sum.system += amount;
           sum.systemItems.push(row);
         }
         if (type === "ธนาคาร" || type === "บัญชีฝาก" || type === "บัญชีถอน") {
@@ -285,7 +285,7 @@ function BalanceCard({ label, value, rows, tone }: { label: string; value: numbe
           {rows.map((row) => (
             <div key={text(row.id) || `${row.account_name}-${row.balance_type}`}>
               <span>{text(row.account_name) || "-"}</span>
-              <strong>{money.format(Number(row.amount || 0))}</strong>
+              <strong>{formatBalanceAmount(row)}</strong>
             </div>
           ))}
         </div>
@@ -320,6 +320,20 @@ function OptionSelect({
       ))}
     </select>
   );
+}
+
+function normalizeName(value: unknown) {
+  return text(value).replace(/\s+/g, "").toLowerCase();
+}
+
+function isMainOrPayout(row: JsonRecord) {
+  const name = normalizeName(row.account_name);
+  return name === "main" || name === "payout";
+}
+
+function formatBalanceAmount(row: JsonRecord) {
+  const amount = money.format(Number(row.amount || 0));
+  return normalizeName(row.account_name) === "safewallet" ? `${amount} USDT` : amount;
 }
 
 function BalanceTable({

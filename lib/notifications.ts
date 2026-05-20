@@ -1,5 +1,6 @@
 import { downloadDriveFile, extractDriveFileId } from "@/lib/google-drive";
 import { getCryptoSummaryUntil, listRowsByDate } from "@/lib/repositories";
+import { round2 } from "@/lib/dates";
 import {
   sendTelegram,
   sendTelegramDocument,
@@ -80,27 +81,88 @@ type CryptoSummary = {
   balanceThb: number;
 };
 
-async function getCryptoSummary(row: JsonRecord): Promise<CryptoSummary> {
+function signedCrypto(row: JsonRecord) {
+  const status = txt(row.status);
+  const usdtValue = Number(row.usdt || 0);
+  const thbValue = Number(row.amount_thb || 0);
+  if (status === "ซื้อ USDT") return { usdt: usdtValue, thb: thbValue };
+  if (status === "ถอน USDT" || status === "โอน USDT" || status === "ขาย USDT") return { usdt: -usdtValue, thb: -thbValue };
+  return { usdt: 0, thb: 0 };
+}
+
+function cryptoOrderKey(row: JsonRecord) {
+  return [
+    txt(row.time).slice(0, 8) || "99:99:99",
+    txt(row.created_at),
+    txt(row.id),
+    txt(row.source_ref)
+  ].join("|");
+}
+
+function sameCryptoRow(a: JsonRecord, b: JsonRecord) {
+  const aId = txt(a.id);
+  const bId = txt(b.id);
+  if (aId && bId && aId === bId) return true;
+  const aRef = txt(a.source_ref);
+  const bRef = txt(b.source_ref);
+  if (aRef && bRef && aRef === bRef) return true;
+  return false;
+}
+
+function prevDay(date: string) {
+  const parsed = new Date(`${date}T00:00:00.000Z`);
+  parsed.setUTCDate(parsed.getUTCDate() - 1);
+  return parsed.toISOString().slice(0, 10);
+}
+
+async function getCryptoEntrySummary(row: JsonRecord): Promise<CryptoSummary> {
   const date = txt(row.date).slice(0, 10);
   if (!date) {
     return { buyUsdt: 0, buyThb: 0, withdrawUsdt: 0, withdrawThb: 0, transferUsdt: 0, transferThb: 0, balanceUsdt: 0, balanceThb: 0 };
   }
-  const summary = await getCryptoSummaryUntil(date);
+  const [opening, dayRows] = await Promise.all([
+    getCryptoSummaryUntil(prevDay(date)),
+    listRowsByDate<JsonRecord>("crypto_transactions", "date", date)
+  ]);
+  const sortedRows = [...dayRows].sort((a, b) => cryptoOrderKey(a).localeCompare(cryptoOrderKey(b)));
+  let balanceUsdt = opening.cumulativeUsdt;
+  let balanceThb = opening.cumulativeThb;
+  let found = false;
+
+  for (const item of sortedRows) {
+    const signed = signedCrypto(item);
+    balanceUsdt = round2(balanceUsdt + signed.usdt);
+    balanceThb = round2(balanceThb + signed.thb);
+    if (sameCryptoRow(item, row)) {
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    const signed = signedCrypto(row);
+    balanceUsdt = round2(opening.cumulativeUsdt + signed.usdt);
+    balanceThb = round2(opening.cumulativeThb + signed.thb);
+  }
+
+  const status = txt(row.status);
+  const rowUsdt = Number(row.usdt || 0);
+  const rowThb = Number(row.amount_thb || 0);
 
   return {
-    buyUsdt: summary.buyUsdt,
-    buyThb: summary.buyThb,
-    withdrawUsdt: summary.withdrawUsdt,
-    withdrawThb: summary.withdrawThb,
-    transferUsdt: summary.transferUsdt,
-    transferThb: summary.transferThb,
-    balanceUsdt: summary.cumulativeUsdt,
-    balanceThb: summary.cumulativeThb
+    buyUsdt: status === "ซื้อ USDT" ? rowUsdt : 0,
+    buyThb: status === "ซื้อ USDT" ? rowThb : 0,
+    withdrawUsdt: status === "ถอน USDT" ? rowUsdt : 0,
+    withdrawThb: status === "ถอน USDT" ? rowThb : 0,
+    transferUsdt: status === "โอน USDT" ? rowUsdt : 0,
+    transferThb: status === "โอน USDT" ? rowThb : 0,
+    balanceUsdt,
+    balanceThb
   };
 }
 
 async function formatCryptoCaption(row: JsonRecord, mode: "create" | "update"): Promise<string> {
-  const summary = await getCryptoSummary(row);
+  const summary = await getCryptoEntrySummary(row);
   const date = txt(row.date).slice(0, 10);
   const lines: string[] = [];
   lines.push(mode === "update" ? "<b>₿ แก้ไขการโยก Crypto</b>" : "<b>₿ แจ้งเตือนการโยก Crypto</b>");
@@ -112,11 +174,11 @@ async function formatCryptoCaption(row: JsonRecord, mode: "create" | "update"): 
   lines.push(`💎 USDT: ${usdtShort.format(Number(row.usdt || 0))}`);
   if (Number(row.exchange_rate || 0)) lines.push(`📈 อัตรา: ${usdtShort.format(Number(row.exchange_rate || 0))}`);
   lines.push("--------------------------------");
-  lines.push(`📊 สรุปวันนี้ (${displayDate(date)}):`);
+  lines.push(`📊 รายการนี้ (${displayDate(date)}):`);
   lines.push(`• ซื้อ USDT: ${usdtShort.format(summary.buyUsdt)} USDT / ${money.format(summary.buyThb)} บาท`);
   lines.push(`• ถอน USDT: ${usdtShort.format(summary.withdrawUsdt)} USDT / ${money.format(summary.withdrawThb)} บาท`);
   lines.push(`• โอน USDT: ${usdtShort.format(summary.transferUsdt)} USDT / ${money.format(summary.transferThb)} บาท`);
-  lines.push(`• คงเหลือทั้งหมด: ${usdtShort.format(summary.balanceUsdt)} USDT / ${money.format(summary.balanceThb)} บาท`);
+  lines.push(`• คงเหลือหลังรายการนี้: ${usdtShort.format(summary.balanceUsdt)} USDT / ${money.format(summary.balanceThb)} บาท`);
   if (txt(row.note)) lines.push(`หมายเหตุ: ${escapeHtml(txt(row.note))}`);
   if (txt(row.user_name)) lines.push(`ผู้บันทึก: ${escapeHtml(txt(row.user_name))}`);
   return lines.join("\n");
