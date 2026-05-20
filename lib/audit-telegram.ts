@@ -30,7 +30,13 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
   const coinFee = summaryRow?.feeCost || 0;
   const totalProfit = feeProfit + coinFee;
   const totalReference = row.transferOnly + row.settlement + row.errorFollowTransfer + row.otherTransfer + row.buyUSDTthb;
-  const finalDiffWithdraw = row.diffWithdraw - row.failedWithdrawPaidSameDay - row.sheetExpense - row.statementFee - totalReference;
+  const finalDiffWithdraw = row.diffWithdraw
+    + row.withdrawCarryoverOut
+    - row.withdrawCarryoverIn
+    - row.failedWithdrawPaidSameDay
+    - row.sheetExpense
+    - row.statementFee
+    - totalReference;
 
   return [
     "📊 สรุปรายวัน + Audit",
@@ -64,6 +70,8 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
     "",
     "หายอด Diff ถอนหลังหักรายการที่อธิบายได้",
     `Diff ถอน: ${money.format(row.diffWithdraw)}`,
+    `+ BO สำเร็จแต่เลื่อนไปโอนวันอื่น: ${money.format(row.withdrawCarryoverOut)} (${row.withdrawCarryoverOutCount} รายการ)`,
+    `- ธนาคารโอนวันนี้แต่เป็น BO วันก่อน: ${money.format(row.withdrawCarryoverIn)} (${row.withdrawCarryoverInCount} รายการ)`,
     `- ถอนไม่สำเร็จที่โอนตามวันเดียวกัน: ${money.format(row.failedWithdrawPaidSameDay)}`,
     `โอนตามวันอื่น: ${money.format(row.failedWithdrawPaid - row.failedWithdrawPaidSameDay)} (ไม่เอาไปรวมใน Diff วันนี้)`,
     `- รายจ่ายจากชีท: ${money.format(row.sheetExpense)}`,
@@ -78,6 +86,8 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
     `โอน Settlement: ${money.format(row.settlement)}`,
     `โอนตามยอด error: ${money.format(row.errorFollowTransfer)}`,
     `อื่นๆ: ${money.format(row.otherTransfer)}`,
+    `ถอนข้ามวันออก: ${money.format(row.withdrawCarryoverOut)}`,
+    `ถอนข้ามวันเข้า: ${money.format(row.withdrawCarryoverIn)}`,
     `รายจ่ายจากชีท: ${money.format(row.sheetExpense)}`,
     `Fee ค่าธรรมเนียม: ${money.format(row.statementFee)}`,
     "",
@@ -92,6 +102,10 @@ export async function buildAuditTelegramMessage(date: string): Promise<string> {
     `ทั้งหมด: ${row.failedWithdrawCount} รายการ / ${money.format(row.failedWithdraw)} บาท`,
     `โอนแล้ว: ${row.failedWithdrawPaidCount} รายการ / ${money.format(row.failedWithdrawPaid)} บาท`,
     `ค้างโอน: ${row.failedWithdrawPendingCount} รายการ / ${money.format(row.failedWithdrawPending)} บาท`,
+    "",
+    "🕘 ยอดถอนข้ามวัน",
+    `เลื่อนไปโอนวันอื่น: ${row.withdrawCarryoverOutCount} รายการ / ${money.format(row.withdrawCarryoverOut)} บาท`,
+    `รับยอดจากวันก่อน: ${row.withdrawCarryoverInCount} รายการ / ${money.format(row.withdrawCarryoverIn)} บาท`,
     "━━━━━━━━━━━━━━━━━━━━"
   ].join("\n");
 }

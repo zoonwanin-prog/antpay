@@ -13,6 +13,7 @@ import {
 import { AdminShell, MetricCard } from "@/components/admin-shell";
 import { AuditFailedList } from "@/components/audit-failed-list";
 import { AuditTelegramButton } from "@/components/audit-telegram-button";
+import { AuditWithdrawCarryover } from "@/components/audit-withdraw-carryover";
 import { getAuditAccountBreakdown, getAuditData } from "@/lib/audit";
 import { bangkokDate } from "@/lib/dates";
 import { getLatestRowDate } from "@/lib/repositories";
@@ -56,6 +57,11 @@ function emptyDayRow(date: string): AuditRow {
     failedWithdrawPending: 0,
     failedWithdrawPendingCount: 0,
     failedWithdrawDetails: [],
+    withdrawCarryoverOut: 0,
+    withdrawCarryoverOutCount: 0,
+    withdrawCarryoverIn: 0,
+    withdrawCarryoverInCount: 0,
+    withdrawCarryoverDetails: [],
     diffWithdraw: 0,
     transferOnly: 0,
     settlement: 0,
@@ -106,7 +112,12 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   // อ้างอิงและสรุป Diff ถอนหลังหักยอด
   const totalReference = dayRow.transferOnly + dayRow.settlement + dayRow.errorFollowTransfer + dayRow.otherTransfer + dayRow.buyUSDTthb;
   const totalExpenseAll = dayRow.statementFee + dayRow.sheetExpense;
-  const finalDiffWithdraw = dayRow.diffWithdraw - dayRow.failedWithdrawPaidSameDay - totalExpenseAll - totalReference;
+  const finalDiffWithdraw = dayRow.diffWithdraw
+    + dayRow.withdrawCarryoverOut
+    - dayRow.withdrawCarryoverIn
+    - dayRow.failedWithdrawPaidSameDay
+    - totalExpenseAll
+    - totalReference;
 
   return (
     <AdminShell
@@ -198,12 +209,16 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
               <div className="summary-split-row"><span>จำนวนรายการไม่สำเร็จ</span><strong>{dayRow.failedWithdrawCount} รายการ</strong></div>
               <div className="summary-split-row"><span>โอนตามแล้ว</span><strong>{dayRow.failedWithdrawPaidCount} รายการ / {money.format(dayRow.failedWithdrawPaid)}</strong></div>
               <div className="summary-split-row"><span>ค้างโอนตาม</span><strong>{dayRow.failedWithdrawPendingCount} รายการ / {money.format(dayRow.failedWithdrawPending)}</strong></div>
+              <div className="summary-split-row"><span>ถอนข้ามวัน - เลื่อนไปโอนวันอื่น</span><strong>{dayRow.withdrawCarryoverOutCount} รายการ / {money.format(dayRow.withdrawCarryoverOut)}</strong></div>
+              <div className="summary-split-row"><span>ถอนข้ามวัน - รับยอดจากวันก่อน</span><strong>{dayRow.withdrawCarryoverInCount} รายการ / {money.format(dayRow.withdrawCarryoverIn)}</strong></div>
               <div className="summary-split-row"><span>ถอนธนาคาร</span><strong>{money.format(dayRow.bankWithdraw)}</strong></div>
               <div className="summary-split-row"><span>Diff ถอน</span><strong className="audit-diff-value">{money.format(dayRow.diffWithdraw)}</strong></div>
             </div>
             <div className="audit-final-diff">
               <p className="audit-final-title">หายอด Diff ถอนหลังหักรายการที่อธิบายได้</p>
               <p>Diff ถอน: {money.format(dayRow.diffWithdraw)}</p>
+              <p>+ BO สำเร็จแต่เลื่อนไปโอนวันอื่น: {money.format(dayRow.withdrawCarryoverOut)} ({dayRow.withdrawCarryoverOutCount} รายการ)</p>
+              <p>- ธนาคารโอนวันนี้แต่เป็น BO วันก่อน: {money.format(dayRow.withdrawCarryoverIn)} ({dayRow.withdrawCarryoverInCount} รายการ)</p>
               <p>- ถอนไม่สำเร็จที่โอนตามวันเดียวกัน: {money.format(dayRow.failedWithdrawPaidSameDay)} ({dayRow.failedWithdrawPaidSameDayCount} รายการ)</p>
               {dayRow.failedWithdrawPaid > dayRow.failedWithdrawPaidSameDay ? (
                 <p>โอนตามวันอื่น: {money.format(dayRow.failedWithdrawPaid - dayRow.failedWithdrawPaidSameDay)} ไม่เอาไปรวมใน Diff วันนี้</p>
@@ -255,14 +270,26 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
         )}
       </section>
 
-      <section className="panel is-stack audit-day-panel">
-        <div className="panel-header">
-          <div>
-            <h2><Search size={16} /> ตรวจรายการถอนไม่สำเร็จที่ถูกทับ</h2>
-            <p>กดเปลี่ยนสถานะ "โอนตามแล้ว" ได้ทันที</p>
+      <section className="audit-two-card-row">
+        <div className="panel is-stack audit-day-panel">
+          <div className="panel-header">
+            <div>
+              <h2><CircleMinus size={16} /> ยอดถอนข้ามวัน</h2>
+              <p>ใช้กับ BO สำเร็จวันนี้ แต่ธนาคารโอนจริงวันอื่น เช่น ธนาคารปิด</p>
+            </div>
           </div>
+          <AuditWithdrawCarryover date={date} items={dayRow.withdrawCarryoverDetails} />
         </div>
-        <AuditFailedList items={dayRow.failedWithdrawDetails} />
+
+        <div className="panel is-stack audit-day-panel">
+          <div className="panel-header">
+            <div>
+              <h2><Search size={16} /> ตรวจรายการถอนไม่สำเร็จที่ถูกทับ</h2>
+              <p>กดเปลี่ยนสถานะ "โอนตามแล้ว" ได้ทันที</p>
+            </div>
+          </div>
+          <AuditFailedList items={dayRow.failedWithdrawDetails} />
+        </div>
       </section>
 
       <section className="panel is-stack audit-day-panel">
@@ -315,7 +342,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 audit.rows.map((row) => {
                   const refSum = row.transferOnly + row.settlement + row.errorFollowTransfer + row.otherTransfer + row.buyUSDTthb;
                   const expenseSum = row.statementFee + row.sheetExpense;
-                  const finalDiff = row.diffWithdraw - row.failedWithdrawPaidSameDay - expenseSum - refSum;
+                  const finalDiff = row.diffWithdraw + row.withdrawCarryoverOut - row.withdrawCarryoverIn - row.failedWithdrawPaidSameDay - expenseSum - refSum;
                   return (
                     <tr key={row.date}>
                       <td>{ddmmyyyy(row.date)}</td>

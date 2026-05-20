@@ -27,6 +27,17 @@ export type AuditDetail = {
   followupBy: string;
 };
 
+export type WithdrawCarryoverDetail = {
+  id: string;
+  boDate: string;
+  paidDate: string;
+  amount: number;
+  reason: string;
+  note: string;
+  status: string;
+  createdBy: string;
+};
+
 export type AuditRow = {
   date: string;
   openingBalance: number;
@@ -49,6 +60,11 @@ export type AuditRow = {
   failedWithdrawPending: number;
   failedWithdrawPendingCount: number;
   failedWithdrawDetails: AuditDetail[];
+  withdrawCarryoverOut: number;
+  withdrawCarryoverOutCount: number;
+  withdrawCarryoverIn: number;
+  withdrawCarryoverInCount: number;
+  withdrawCarryoverDetails: WithdrawCarryoverDetail[];
   diffWithdraw: number;
   transferOnly: number;
   settlement: number;

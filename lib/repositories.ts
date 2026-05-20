@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { bangkokDate, monthRange, round2 } from "@/lib/dates";
 import { fetchStatementRows, isFailedStatus, normalizeBankStatementRow } from "@/lib/statement";
-import type { AuditDetail, CryptoSummaryUntil, JsonRecord, StatementDailyRow } from "@/lib/types";
+import type { AuditDetail, CryptoSummaryUntil, JsonRecord, StatementDailyRow, WithdrawCarryoverDetail } from "@/lib/types";
 
 const SUPABASE_PAGE_SIZE = 1000;
 
@@ -430,6 +430,105 @@ export async function getFailedPayoutItemsByDate(month: string): Promise<{
   }
 
   return result;
+}
+
+function mapWithdrawCarryover(row: JsonRecord): WithdrawCarryoverDetail {
+  return {
+    id: String(row.id || ""),
+    boDate: String(row.bo_date || "").slice(0, 10),
+    paidDate: String(row.paid_date || "").slice(0, 10),
+    amount: Number(row.amount || 0),
+    reason: String(row.reason || ""),
+    note: String(row.note || ""),
+    status: String(row.status || "paid"),
+    createdBy: String(row.created_by || "")
+  };
+}
+
+export async function getWithdrawCarryoversByMonth(month: string): Promise<{
+  byBoDate: Record<string, number>;
+  byBoDateCount: Record<string, number>;
+  byPaidDate: Record<string, number>;
+  byPaidDateCount: Record<string, number>;
+  detailsByDate: Record<string, WithdrawCarryoverDetail[]>;
+}> {
+  const result = {
+    byBoDate: {} as Record<string, number>,
+    byBoDateCount: {} as Record<string, number>,
+    byPaidDate: {} as Record<string, number>,
+    byPaidDateCount: {} as Record<string, number>,
+    detailsByDate: {} as Record<string, WithdrawCarryoverDetail[]>
+  };
+  let rows: JsonRecord[] = [];
+  try {
+    const [boRows, paidRows] = await Promise.all([
+      listRowsByMonth<JsonRecord>("withdraw_carryovers", "bo_date", month),
+      listRowsByMonth<JsonRecord>("withdraw_carryovers", "paid_date", month)
+    ]);
+    const byId = new Map<string, JsonRecord>();
+    for (const row of [...boRows, ...paidRows]) byId.set(String(row.id || `${row.bo_date}:${row.paid_date}:${row.amount}`), row);
+    rows = Array.from(byId.values());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/withdraw_carryovers|schema cache|does not exist|Could not find/i.test(message)) return result;
+    throw error;
+  }
+
+  for (const row of rows) {
+    const item = mapWithdrawCarryover(row);
+    if (item.status === "cancelled") continue;
+    const amount = Math.abs(Number(item.amount || 0));
+    if (item.boDate) {
+      result.byBoDate[item.boDate] = round2((result.byBoDate[item.boDate] || 0) + amount);
+      result.byBoDateCount[item.boDate] = (result.byBoDateCount[item.boDate] || 0) + 1;
+      result.detailsByDate[item.boDate] ||= [];
+      result.detailsByDate[item.boDate].push(item);
+    }
+    if (item.paidDate && item.status === "paid") {
+      result.byPaidDate[item.paidDate] = round2((result.byPaidDate[item.paidDate] || 0) + amount);
+      result.byPaidDateCount[item.paidDate] = (result.byPaidDateCount[item.paidDate] || 0) + 1;
+      if (item.paidDate !== item.boDate) {
+        result.detailsByDate[item.paidDate] ||= [];
+        result.detailsByDate[item.paidDate].push(item);
+      }
+    }
+  }
+  return result;
+}
+
+export async function saveWithdrawCarryover(input: {
+  id?: string;
+  boDate: string;
+  paidDate: string;
+  amount: number;
+  reason?: string;
+  note?: string;
+  status?: string;
+  user?: string;
+}) {
+  const now = new Date().toISOString();
+  const payload = {
+    bo_date: input.boDate,
+    paid_date: input.paidDate,
+    amount: Math.abs(Number(input.amount || 0)),
+    reason: input.reason || "ธนาคารปิด",
+    status: input.status || "paid",
+    note: input.note || null,
+    created_by: input.user || "admin",
+    updated_at: now
+  };
+  const query = input.id
+    ? getSupabaseAdmin().from("withdraw_carryovers").update(payload).eq("id", input.id)
+    : getSupabaseAdmin().from("withdraw_carryovers").insert({ ...payload, created_at: now });
+  const { data, error } = await query.select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function deleteWithdrawCarryover(id: string) {
+  const { error } = await getSupabaseAdmin().from("withdraw_carryovers").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { id };
 }
 
 export async function markPayoutFollowupPaid(itemId: string, paid: boolean, user = "admin", paidDate?: string) {

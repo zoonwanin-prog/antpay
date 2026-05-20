@@ -1394,6 +1394,17 @@ textarea {
   margin-top: 18px;
 }
 
+.audit-two-card-row {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.audit-two-card-row .audit-day-panel {
+  height: 100%;
+}
+
 .audit-diff-value {
   color: var(--red);
 }
@@ -1425,6 +1436,77 @@ textarea {
   color: var(--text);
   font-weight: 800;
   margin-top: 6px;
+}
+
+.audit-carryover-box {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.audit-carryover-form {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+}
+
+.audit-carryover-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.audit-carryover-form span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.audit-carryover-note {
+  grid-column: 1 / -1;
+}
+
+.audit-carryover-form button,
+.audit-carryover-row button {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.audit-carryover-form button {
+  grid-column: 1 / -1;
+}
+
+.audit-carryover-list {
+  display: grid;
+  gap: 10px;
+}
+
+.audit-carryover-row {
+  align-items: center;
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.audit-carryover-row div {
+  display: grid;
+  gap: 3px;
+}
+
+.audit-carryover-row strong {
+  color: var(--text);
+}
+
+.audit-carryover-row span,
+.audit-carryover-row small {
+  color: var(--text-sec);
+  font-size: 12px;
 }
 
 .audit-account-list {
@@ -3499,6 +3581,8 @@ button:disabled,
   .bot-ops-grid,
   .statement-tools-grid,
   .import-summary-grid,
+  .audit-carryover-form,
+  .audit-two-card-row,
   .bogo-summary-grid,
   .transfer-summary-grid,
   .crypto-summary-grid,

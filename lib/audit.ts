@@ -1,5 +1,6 @@
 import {
   getFailedPayoutItemsByDate,
+  getWithdrawCarryoversByMonth,
   listBalancesThroughMonth,
   listMasterData,
   listRowsByDate,
@@ -161,6 +162,7 @@ export async function getAuditData(monthInput?: string | null) {
     transferRows,
     cryptoRows,
     failedPayout,
+    withdrawCarryovers,
     masterData
   ] = await Promise.all([
     listStatementDaily(month),
@@ -170,6 +172,7 @@ export async function getAuditData(monthInput?: string | null) {
     listRowsByMonth<JsonRecord>("transfers", "date", month),
     listRowsByMonth<JsonRecord>("crypto_transactions", "date", month),
     getFailedPayoutItemsByDate(month),
+    getWithdrawCarryoversByMonth(month),
     listMasterData()
   ]);
 
@@ -240,6 +243,8 @@ export async function getAuditData(monthInput?: string | null) {
   }
 
   Object.keys(failedPayout.byDate).forEach((date) => dateKeys.add(date));
+  Object.keys(withdrawCarryovers.byBoDate).forEach((date) => dateKeys.add(date));
+  Object.keys(withdrawCarryovers.byPaidDate).forEach((date) => dateKeys.add(date));
 
   const rows: AuditRow[] = Array.from(dateKeys).sort().map((date) => {
     const bank = bankByDate[date] || { deposit: 0, withdraw: 0, fee: 0, balance: 0 };
@@ -249,9 +254,23 @@ export async function getAuditData(monthInput?: string | null) {
     const diffBank = actualBalance - expectedBalance;
     const diffDeposit = bank.deposit - (boDeposit[date] || 0);
     const diffWithdraw = bank.withdraw - (boWithdraw[date] || 0);
+    const withdrawCarryoverOut = withdrawCarryovers.byBoDate[date] || 0;
+    const withdrawCarryoverIn = withdrawCarryovers.byPaidDate[date] || 0;
+    const withdrawReference = (transferOnly[date] || 0)
+      + (settlement[date] || 0)
+      + (errorFollowTransfer[date] || 0)
+      + (otherTransfer[date] || 0)
+      + (buyUSDTthb[date] || 0);
+    const explainedDiffWithdraw = diffWithdraw
+      + withdrawCarryoverOut
+      - withdrawCarryoverIn
+      - (failedPayout.byDatePaidSameDay[date] || 0)
+      - (expenses[date] || 0)
+      - bank.fee
+      - withdrawReference;
     const flags: string[] = [];
     if (Math.abs(diffBank) > 1) flags.push("ปิดยอดไม่ตรง");
-    if (diffWithdraw > 0) flags.push("ตรวจถอนเกิน BO");
+    if (Math.abs(explainedDiffWithdraw) > 1) flags.push("ตรวจถอนเกิน BO");
     if ((failedPayout.byDate[date] || 0) > 0) flags.push("มีรายการต้องโอนตาม");
     if (diffDeposit < 0) flags.push("ตรวจฝาก BO เกินธนาคาร");
     return {
@@ -276,6 +295,11 @@ export async function getAuditData(monthInput?: string | null) {
       failedWithdrawPending: round2(failedPayout.byDatePending[date] || 0),
       failedWithdrawPendingCount: failedPayout.byDatePendingCount[date] || 0,
       failedWithdrawDetails: failedPayout.detailsByDate[date] || [],
+      withdrawCarryoverOut: round2(withdrawCarryoverOut),
+      withdrawCarryoverOutCount: withdrawCarryovers.byBoDateCount[date] || 0,
+      withdrawCarryoverIn: round2(withdrawCarryoverIn),
+      withdrawCarryoverInCount: withdrawCarryovers.byPaidDateCount[date] || 0,
+      withdrawCarryoverDetails: withdrawCarryovers.detailsByDate[date] || [],
       diffWithdraw: round2(diffWithdraw),
       transferOnly: round2(transferOnly[date] || 0),
       settlement: round2(settlement[date] || 0),
