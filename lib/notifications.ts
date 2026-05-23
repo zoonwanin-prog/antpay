@@ -165,6 +165,7 @@ async function getCryptoEntrySummary(row: JsonRecord): Promise<CryptoSummary> {
 
   const rowUsdt = Number(row.usdt || 0);
   const rowThb = Number(row.amount_thb || 0);
+  const rowStatus = txt(row.status);
   if (!found) {
     const signed = signedCrypto(row);
     balanceUsdt = round2(balanceUsdt + signed.usdt);
@@ -172,12 +173,12 @@ async function getCryptoEntrySummary(row: JsonRecord): Promise<CryptoSummary> {
   }
 
   return {
-    buyUsdt: round2(summary.buyUsdt + rowUsdt),
-    buyThb: round2(summary.buyThb + rowThb),
-    withdrawUsdt: round2(summary.withdrawUsdt + rowUsdt),
-    withdrawThb: round2(summary.withdrawThb + rowThb),
-    transferUsdt: round2(summary.transferUsdt + rowUsdt),
-    transferThb: round2(summary.transferThb + rowThb),
+    buyUsdt: round2(summary.buyUsdt + (rowStatus === "ซื้อ USDT" ? rowUsdt : 0)),
+    buyThb: round2(summary.buyThb + (rowStatus === "ซื้อ USDT" ? rowThb : 0)),
+    withdrawUsdt: round2(summary.withdrawUsdt + (rowStatus === "ถอน USDT" ? rowUsdt : 0)),
+    withdrawThb: round2(summary.withdrawThb + (rowStatus === "ถอน USDT" ? rowThb : 0)),
+    transferUsdt: round2(summary.transferUsdt + (rowStatus === "โอน USDT" ? rowUsdt : 0)),
+    transferThb: round2(summary.transferThb + (rowStatus === "โอน USDT" ? rowThb : 0)),
     balanceUsdt,
     balanceThb
   };
