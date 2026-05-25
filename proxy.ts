@@ -37,6 +37,7 @@ function isPublicPath(pathname: string) {
   return (
     pathname === "/login" ||
     pathname.startsWith("/api/auth/") ||
+    pathname === "/api/google/oauth/callback" ||
     pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico"
