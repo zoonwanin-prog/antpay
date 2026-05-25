@@ -1,7 +1,14 @@
 import type { NextRequest } from "next/server";
 import { addDays, bangkokDate } from "@/lib/dates";
 import { assertCronAuthorized, jsonError, jsonOk } from "@/lib/http";
-import { runLoggedBotJob, syncCompletedSettlements, syncSafeWalletApprovedDeposits, syncTickets, syncWalletSnapshot } from "@/lib/go2pay";
+import {
+  runLoggedBotJob,
+  syncBogo2payReports,
+  syncCompletedSettlements,
+  syncSafeWalletApprovedDeposits,
+  syncTickets,
+  syncWalletSnapshot
+} from "@/lib/go2pay";
 import { syncStatementDaily } from "@/lib/statement";
 
 export async function GET(request: NextRequest) {
@@ -12,6 +19,7 @@ export async function GET(request: NextRequest) {
     const yesterday = addDays(today, -1);
     const jobs = [
       await runLoggedBotJob("Cron sync_all tickets", () => syncTickets()),
+      await runLoggedBotJob("Cron sync_all bogo2pay", () => syncBogo2payReports(yesterday, today)),
       await runLoggedBotJob("Cron sync_all safewallet", () => syncSafeWalletApprovedDeposits(addDays(today, -30), today)),
       await runLoggedBotJob("Cron sync_all settlements", () => syncCompletedSettlements(yesterday, today)),
       await runLoggedBotJob("Cron sync_all wallet_snapshot", () => syncWalletSnapshot(today)),
