@@ -64,12 +64,12 @@ export function Go2PayTokenCard({ initialStatus }: { initialStatus: TokenStatus 
     <div className="panel settings-card token-admin-card">
       <div className="panel-header">
         <div>
-          <h2><KeyRound size={18} /> Token admin</h2>
-          <p>ทดสอบ Go2Pay API และบันทึก token override ฝั่ง server</p>
+          <h2><KeyRound size={18} /> Antpay admin token</h2>
+          <p>ทดสอบ Antpay API และบันทึก token override ฝั่ง server</p>
         </div>
       </div>
       <div className="settings-env-list">
-        <div className="summary-split-row"><span>GO2PAY</span><strong>{status.hasToken ? "พร้อมใช้งาน" : "ยังไม่ได้ตั้งค่า"}</strong></div>
+        <div className="summary-split-row"><span>ANTPAY</span><strong>{status.hasToken ? "พร้อมใช้งาน" : "ยังไม่ได้ตั้งค่า"}</strong></div>
         <div className="summary-split-row"><span>source</span><strong>{status.source}</strong></div>
         <div className="summary-split-row"><span>masked</span><strong>{status.masked}</strong></div>
         <label className="token-admin-field">
@@ -77,7 +77,7 @@ export function Go2PayTokenCard({ initialStatus }: { initialStatus: TokenStatus 
           <input
             type="password"
             value={token}
-            placeholder="วาง Go2Pay admin token ใหม่"
+            placeholder="วาง Antpay admin token ใหม่"
             onChange={(event) => setToken(event.target.value)}
           />
         </label>

@@ -24,7 +24,7 @@ function inferJob(url: string): string {
   if (url.includes("/safe-wallet")) return "SafeWallet Sync";
   if (url.includes("/merchants")) return "Wallet Snapshot";
   if (url.includes("/reports")) return "Daily Report";
-  return "Go2Pay Admin API";
+  return "Antpay Admin API";
 }
 
 function numberValue(value: unknown): number {
@@ -154,8 +154,8 @@ export async function fetchGo2Pay<T>(pathOrUrl: string, jobName?: string): Promi
   const job = jobName || inferJob(url);
   const token = await getGo2PayAdminToken();
   if (!token) {
-    const detail = "ไม่พบ Go2Pay Admin Token";
-    await sendTelegram(`⚠️ Go2Pay Token ใช้งานไม่ได้\n\nงานที่ล้มเหลว: ${job}\nรายละเอียด: ${detail}`, await telegramTarget("tokenAlert"));
+    const detail = "ไม่พบ Antpay Admin Token";
+    await sendTelegram(`⚠️ Antpay Token ใช้งานไม่ได้\n\nงานที่ล้มเหลว: ${job}\nรายละเอียด: ${detail}`, await telegramTarget("tokenAlert"));
     throw new Error(detail);
   }
 
@@ -173,7 +173,7 @@ export async function fetchGo2Pay<T>(pathOrUrl: string, jobName?: string): Promi
     const text = await res.text();
     const detail = `HTTP ${res.status}: ${text}`;
     if (res.status === 401 || res.status === 403) {
-      await sendTelegram(`⚠️ Go2Pay Token หมดอายุ / ใช้งานไม่ได้\n\nงานที่ล้มเหลว: ${job}\nรายละเอียด: Token expired / HTTP ${res.status}`, await telegramTarget("tokenAlert"));
+      await sendTelegram(`⚠️ Antpay Token หมดอายุ / ใช้งานไม่ได้\n\nงานที่ล้มเหลว: ${job}\nรายละเอียด: Token expired / HTTP ${res.status}`, await telegramTarget("tokenAlert"));
     }
     throw new Error(detail);
   }
@@ -196,7 +196,7 @@ function go2PayApiRoot() {
 
 export async function testGo2PayAdminToken(token?: string) {
   const testToken = token || await getGo2PayAdminToken();
-  if (!testToken) throw new Error("ไม่พบ Go2Pay Admin Token");
+  if (!testToken) throw new Error("ไม่พบ Antpay Admin Token");
   const endpoints = [
     { label: "Tickets", url: `${appConfig.go2payApiBase}/tickets?limit=1&offset=0` },
     { label: "Settlements", url: `${appConfig.go2payApiBase}/settlements?limit=1&offset=0` },
@@ -404,7 +404,7 @@ export async function syncBogo2payReports(startDate: string, endDate: string) {
   for (let date = startDate; date <= safeEndDate; date = addDays(date, 1)) {
     const res = await fetchGo2Pay<{ data?: { summary?: Record<string, unknown> } }>(
       `/reports?start_date=${date}&end_date=${date}`,
-      "BoGo2pay Report"
+      "BoAntpay Report"
     );
     const summary = res.data?.summary || {};
     scanned++;
@@ -421,23 +421,23 @@ export async function syncBogo2payReports(startDate: string, endDate: string) {
     rows.push({
       date,
       time,
-      item: "Go2Pay",
+      item: "Antpay",
       type: "ฝาก",
       actual_amount: round2(revenue),
       fee: round2(revenueFee),
       net_amount: round2(revenue - revenueFee),
-      note: "Go2Pay report sync",
+      note: "Antpay report sync",
       user_name: "auto"
     });
     rows.push({
       date,
       time: date === bangkokDate() ? time : "23:56:00",
-      item: "Go2Pay",
+      item: "Antpay",
       type: "ถอน",
       actual_amount: round2(payout),
       fee: round2(payoutFee),
       net_amount: round2(payout - payoutFee),
-      note: "Go2Pay report sync",
+      note: "Antpay report sync",
       user_name: "auto"
     });
   }

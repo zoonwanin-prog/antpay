@@ -35,7 +35,7 @@ export default async function BoGo2PayPage({ searchParams }: { searchParams: Pro
   return (
     <AdminShell
       active="bogo2pay"
-      title="BoGo2pay"
+      title="BoAntpay"
       description="บันทึกยอดฝาก ถอน ค่าธรรมเนียม และยอดสุทธิจาก BO"
       actions={
         <form method="get" className="date-filter transfer-date-filter">

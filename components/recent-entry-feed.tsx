@@ -14,7 +14,7 @@ export function RecentEntryFeed({ rows }: { rows: JsonRecord[] }) {
       <div className="panel-header">
         <div>
           <h2>รายการล่าสุดทุกประเภท</h2>
-          <p>รวมรายการล่าสุดจากโยกเงิน คริปโต ยอดคงเหลือ รายจ่าย และ BoGo2pay</p>
+          <p>รวมรายการล่าสุดจากโยกเงิน คริปโต ยอดคงเหลือ รายจ่าย และ BoAntpay</p>
         </div>
       </div>
       <div className="table-wrap">

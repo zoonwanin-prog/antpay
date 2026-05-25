@@ -19,7 +19,7 @@ const entryLabels: Record<EntryKind, string> = {
   crypto_transactions: "คริปโต",
   expenses: "รายจ่าย",
   balances: "ยอดคงเหลือ",
-  bogo2pay_transactions: "BoGo2pay"
+  bogo2pay_transactions: "BoAntpay"
 };
 
 const statusOptions: Record<EntryKind, string[]> = {
@@ -134,7 +134,7 @@ export function EntryForm({
         amount: postedAmount
       } : {
         ...common,
-        item: formData.get("item") || "BoGo2pay",
+        item: formData.get("item") || "BoAntpay",
         type: formData.get("status") || "ฝาก",
         actual_amount: postedAmount,
         fee: postedFee,
@@ -185,7 +185,7 @@ export function EntryForm({
                 <option value="crypto_transactions">คริปโต</option>
                 <option value="balances">ยอดคงเหลือ</option>
                 <option value="expenses">รายจ่าย</option>
-                <option value="bogo2pay_transactions">BoGo2pay</option>
+                <option value="bogo2pay_transactions">BoAntpay</option>
               </select>
             </label>
           ) : null}
@@ -216,7 +216,7 @@ export function EntryForm({
           {kind === "expenses" || kind === "bogo2pay_transactions" ? (
             <label>
               <span>รายการ</span>
-              <input name="item" placeholder={kind === "expenses" ? "ระบุรายการค่าใช้จ่าย" : "Go2Pay"} />
+              <input name="item" placeholder={kind === "expenses" ? "ระบุรายการค่าใช้จ่าย" : "Antpay"} />
             </label>
           ) : null}
           {statusOptions[kind].length ? (

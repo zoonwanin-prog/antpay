@@ -8,7 +8,7 @@ const operations = [
   { action: "tickets", label: "Sync Ticket", icon: Ticket },
   { action: "safewallet", label: "Sync SafeWallet", icon: ShieldCheck },
   { action: "settlements", label: "Sync Settlement USDT", icon: DatabaseZap },
-  { action: "bogo2pay", label: "Sync BoGo2pay", icon: Building2 },
+  { action: "bogo2pay", label: "Sync BoAntpay", icon: Building2 },
   { action: "statement_daily", label: "Sync Statement Daily", icon: FileSpreadsheet },
   { action: "wallet_snapshot", label: "Snap main+payout", icon: Wallet },
   { action: "cleanup_bot_logs", label: "Cleanup Bot Logs", icon: Trash2 }

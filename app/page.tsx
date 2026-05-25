@@ -119,7 +119,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <section className="daily-section">
         <SectionTitle icon={<WalletCards size={17} />}>สรุปกำไร</SectionTitle>
         <div className="daily-grid cols-3">
-          <DashboardCard label="กำไรค่าธรรมเนียม BOGO2PAY" value={money.format(feeProfit)} tone="orange" />
+          <DashboardCard label="กำไรค่าธรรมเนียม BOANTPAY" value={money.format(feeProfit)} tone="orange" />
           <DashboardCard label="ค่าธรรมเนียมขึ้นเหรียญ" value={money.format(safeWalletFee)} tone="purple" />
           <DashboardCard label="กำไรรวมวันนี้" value={money.format(totalProfit)} tone="green" />
         </div>
@@ -138,8 +138,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <section className="daily-section">
         <SectionTitle icon={<Landmark size={17} />}>ฝาก ถอน และรายจ่าย</SectionTitle>
         <div className="daily-grid cols-5">
-          <DashboardCard label="ฝาก GO2PAY วันนี้" value={money.format(boDepositToday)} tone="green" />
-          <DashboardCard label="ถอน GO2PAY วันนี้" value={money.format(boWithdrawToday)} tone="red" />
+          <DashboardCard label="ฝาก ANTPAY วันนี้" value={money.format(boDepositToday)} tone="green" />
+          <DashboardCard label="ถอน ANTPAY วันนี้" value={money.format(boWithdrawToday)} tone="red" />
           <DashboardCard label="ฝากธนาคารวันนี้" value={money.format(bankDepositToday)} tone="green" />
           <DashboardCard label="ถอนธนาคารวันนี้" value={money.format(bankWithdrawToday)} tone="red" />
           <DashboardCard label="รายจ่ายวันนี้" value={money.format(expenseToday)} tone="red" />

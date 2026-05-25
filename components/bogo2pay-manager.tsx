@@ -13,7 +13,7 @@ const money = new Intl.NumberFormat("th-TH", { minimumFractionDigits: 2, maximum
 const typeOptions = ["ฝาก", "ถอน"];
 
 function emptyForm(date: string): BogoForm {
-  return { date, time: "", item: "Go2Pay", type: "ฝาก", actual_amount: "", fee: "0", net_amount: "", user_name: "admin", note: "" };
+  return { date, time: "", item: "Antpay", type: "ฝาก", actual_amount: "", fee: "0", net_amount: "", user_name: "admin", note: "" };
 }
 
 function text(value: unknown) {
@@ -78,7 +78,7 @@ export function Bogo2PayManager({
       table: "bogo2pay_transactions",
       date: form.date,
       time: form.time || null,
-      item: form.item || "Go2Pay",
+      item: form.item || "Antpay",
       type: form.type || "ฝาก",
       actual_amount: Number(form.actual_amount || 0),
       fee: Number(form.fee || 0),
@@ -114,7 +114,7 @@ export function Bogo2PayManager({
     setForm({
       date: text(row.date).slice(0, 10) || date,
       time: text(row.time).slice(0, 5),
-      item: text(row.item) || "Go2Pay",
+      item: text(row.item) || "Antpay",
       type: text(row.type) || "ฝาก",
       actual_amount: text(row.actual_amount),
       fee: text(row.fee),
@@ -129,7 +129,7 @@ export function Bogo2PayManager({
 
   async function deleteRow(row: JsonRecord) {
     const id = text(row.id);
-    if (!id || !window.confirm("ลบรายการ BoGo2pay นี้ใช่ไหม?")) return;
+    if (!id || !window.confirm("ลบรายการ BoAntpay นี้ใช่ไหม?")) return;
     setMessage("");
     setStatus("");
     try {
@@ -163,7 +163,7 @@ export function Bogo2PayManager({
 
       <section className="transfer-form-heading">
         <span aria-hidden="true"><Landmark size={23} /></span>
-        <h2>{editingId ? "แก้ไขธุรกรรม BoGo2pay" : "ธุรกรรม BoGo2pay"}</h2>
+        <h2>{editingId ? "แก้ไขธุรกรรม BoAntpay" : "ธุรกรรม BoAntpay"}</h2>
       </section>
 
       <section className="panel form-box transfer-form-panel">
@@ -220,12 +220,12 @@ function BogoSummary({ rows, date }: { rows: JsonRecord[]; date: string }) {
   return (
     <section className="grid compact-card-grid bogo-summary-grid">
       <div className="card metric-card compact-card transfer-summary-card tone-good">
-        <p className="metric">ฝาก BoGo2pay ({dayLabel})</p>
+        <p className="metric">ฝาก BoAntpay ({dayLabel})</p>
         <p className="value">{money.format(totals.depositAmount)}</p>
         <span className="metric-hint">{totals.depositCount} รายการ</span>
       </div>
       <div className="card metric-card compact-card transfer-summary-card tone-bad">
-        <p className="metric">ถอน BoGo2pay ({dayLabel})</p>
+        <p className="metric">ถอน BoAntpay ({dayLabel})</p>
         <p className="value">{money.format(totals.withdrawAmount)}</p>
         <span className="metric-hint">{totals.withdrawCount} รายการ</span>
       </div>
@@ -272,14 +272,14 @@ function StatusMessage({ status, message }: { status: "" | "ok" | "err"; message
 function BogoTable({ rows, date, page, pageCount, totalRows, onEdit, onDelete }: { rows: JsonRecord[]; date: string; page: number; pageCount: number; totalRows: number; onEdit: (row: JsonRecord) => void; onDelete: (row: JsonRecord) => void }) {
   return (
     <section className="panel data-list-panel is-stack">
-      <div className="panel-header"><div><h2>รายการ BoGo2pay</h2><p>รายการทั้งหมด เรียงจากล่าสุดไปเก่า (สรุปยอดด้านบนนับเฉพาะวันที่เลือก)</p></div></div>
+      <div className="panel-header"><div><h2>รายการ BoAntpay</h2><p>รายการทั้งหมด เรียงจากล่าสุดไปเก่า (สรุปยอดด้านบนนับเฉพาะวันที่เลือก)</p></div></div>
       <div className="table-wrap">
         <table>
           <thead>
             <tr><th>วันที่</th><th>เวลา</th><th>รายการ</th><th>ประเภท</th><th className="num">ยอดจริง</th><th className="num">ค่าธรรมเนียม</th><th className="num">ยอดสุทธิ</th><th>หมายเหตุ</th><th>ผู้บันทึก</th><th>จัดการ</th></tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? <tr><td colSpan={10}><div className="empty-state">ยังไม่มีรายการ BoGo2pay</div></td></tr> : rows.map((row) => (
+            {rows.length === 0 ? <tr><td colSpan={10}><div className="empty-state">ยังไม่มีรายการ BoAntpay</div></td></tr> : rows.map((row) => (
               <tr key={text(row.id) || `${row.date}-${row.created_at}`}>
                 <td>{text(row.date).slice(0, 10)}</td><td>{text(row.time).slice(0, 5) || "-"}</td><td>{text(row.item) || "-"}</td><td><span className={`bogo-type-pill ${typeClass(row.type)}`}>{text(row.type) || "-"}</span></td>
                 <td className="num">{money.format(Number(row.actual_amount || 0))}</td><td className="num">{money.format(Number(row.fee || 0))}</td><td className="num">{money.format(Number(row.net_amount || 0))}</td>

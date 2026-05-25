@@ -330,7 +330,7 @@ export async function listRecentEntryFeed(limitPerTable = 8): Promise<JsonRecord
     ...crypto.map((row) => ({ ...row, feed_type: "คริปโต", feed_amount: row.amount_thb })),
     ...balances.map((row) => ({ ...row, feed_type: "ยอดคงเหลือ", feed_amount: row.amount })),
     ...expenses.map((row) => ({ ...row, feed_type: "รายจ่าย", feed_amount: row.amount })),
-    ...bogo2pay.map((row) => ({ ...row, feed_type: "BoGo2pay", feed_amount: row.actual_amount }))
+    ...bogo2pay.map((row) => ({ ...row, feed_type: "BoAntpay", feed_amount: row.actual_amount }))
   ];
   return feed.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""))).slice(0, 30);
 }

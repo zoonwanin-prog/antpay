@@ -65,7 +65,7 @@ const navGroups = [
       { key: "statementSearch", href: "/statements/search", label: "ค้นหาจาก Statement", icon: Search },
       { key: "bulkStatus", href: "/statements/bulk-status", label: "ค้นหาสถานะรายการ Bulk", icon: ListFilter },
       { key: "expenses", href: "/expenses", label: "รายจ่าย", icon: ReceiptText },
-      { key: "bogo2pay", href: "/bogo2pay", label: "BoGo2pay", icon: Landmark },
+      { key: "bogo2pay", href: "/bogo2pay", label: "BoAntpay", icon: Landmark },
       { key: "safewallet", href: "/safewallet", label: "SafeWallet", icon: ShieldCheck }
     ]
   },

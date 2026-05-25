@@ -25,7 +25,7 @@ export default async function SystemSettingsPage() {
     <AdminShell active="settingsSystem" title="ตั้งค่าระบบ" description="Bot operations, token admin, Telegram, log bot และการเชื่อม Google">
       <section className="grid compact-card-grid">
         <MetricCard label="Bot logs" value={String(botLogs.length)} icon={<Bot size={18} />} />
-        <MetricCard label="Token admin" value={envStatus("GO2PAY_ADMIN_TOKEN")} icon={<KeyRound size={18} />} />
+        <MetricCard label="Antpay token" value={envStatus("GO2PAY_ADMIN_TOKEN")} icon={<KeyRound size={18} />} />
         <MetricCard label="Telegram" value={envStatus("TELEGRAM_BOT_TOKEN")} icon={<Radio size={18} />} />
         <GoogleDriveCard returnTo="/settings/system" />
       </section>
