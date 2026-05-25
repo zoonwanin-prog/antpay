@@ -36,7 +36,7 @@ export function LoginForm() {
           <LockKeyhole size={24} strokeWidth={2.3} />
         </span>
         <div>
-          <p>Go2Pay Dashboard</p>
+          <p>Antpay Dashboard</p>
           <h1>เข้าสู่ระบบ</h1>
         </div>
       </div>
@@ -62,4 +62,3 @@ export function LoginForm() {
     </form>
   );
 }
-

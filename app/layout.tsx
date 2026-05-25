@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Go2payBo Admin",
-  description: "Supabase + Vercel migration admin for Go2payBo"
+  title: "Antpay Admin",
+  description: "Supabase + Vercel admin for Antpay"
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

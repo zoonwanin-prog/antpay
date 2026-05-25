@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-export const SESSION_COOKIE = "go2pay_session";
+export const SESSION_COOKIE = "antpay_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 
 type SessionPayload = {
@@ -14,7 +14,7 @@ function base64Url(input: Buffer | string) {
 }
 
 function sessionSecret() {
-  return process.env.AUTH_SECRET || process.env.CRON_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "go2pay-dev-session";
+  return process.env.AUTH_SECRET || process.env.CRON_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "antpay-dev-session";
 }
 
 export function hashPassword(password: string) {
@@ -38,4 +38,3 @@ export function createSessionToken(username: string, role: string) {
   const signature = createHmac("sha256", sessionSecret()).update(body).digest("base64url");
   return `${body}.${signature}`;
 }
-

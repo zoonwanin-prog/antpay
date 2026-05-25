@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const SESSION_COOKIE = "go2pay_session";
+const SESSION_COOKIE = "antpay_session";
 
 function secret() {
-  return process.env.AUTH_SECRET || process.env.CRON_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "go2pay-dev-session";
+  return process.env.AUTH_SECRET || process.env.CRON_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "antpay-dev-session";
 }
 
 function base64Url(bytes: ArrayBuffer) {

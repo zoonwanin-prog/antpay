@@ -268,7 +268,7 @@ export async function uploadToGoogleDrive(input: UploadInput): Promise<UploadRes
   const metadata: Record<string, unknown> = { name: input.fileName };
   if (folderId) metadata.parents = [folderId];
 
-  const boundary = `go2paybo-${crypto.randomUUID()}`;
+  const boundary = `antpay-${crypto.randomUUID()}`;
   const body = multipartBody(metadata, input, boundary);
 
   const res = await fetch(

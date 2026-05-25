@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const target = String(body.target || "") as TelegramTargetKey;
     if (!TELEGRAM_TARGETS.includes(target)) return jsonError("ไม่รู้จักประเภท Telegram target");
     const result = await sendTelegram(
-      `ทดสอบ Telegram ${target.toUpperCase()} จาก Go2payBO`,
+      `ทดสอบ Telegram ${target.toUpperCase()} จาก AntpayBO`,
       await telegramTarget(target)
     );
     return jsonOk({ success: true, result });

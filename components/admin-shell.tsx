@@ -104,7 +104,7 @@ export function AdminShell({ active, title, description, children, actions }: Ad
             <Zap size={20} strokeWidth={2.4} fill="currentColor" />
           </span>
           <div className="topbar-text">
-            <span className="topbar-name">Go2Pay</span>
+            <span className="topbar-name">Antpay</span>
             <span className="topbar-sub">DASHBOARD</span>
           </div>
         </div>
@@ -151,7 +151,7 @@ export function AdminShell({ active, title, description, children, actions }: Ad
         <div className="nav-footer">
           <div className="nav-version">
             <WalletCards size={13} strokeWidth={2} />
-            <span>Go2pay BO · v1.0</span>
+            <span>Antpay BO · v1.0</span>
           </div>
         </div>
       </aside>

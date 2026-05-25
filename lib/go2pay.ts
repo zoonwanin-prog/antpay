@@ -506,7 +506,7 @@ export async function syncCompletedSettlements(startDate: string, endDate: strin
       source_ref: `settlement:${item.id || item.uuid || `${completedAt}:${item.amount}`}`,
       date: sourceDate(completedAt),
       time: sourceTime(completedAt),
-      source_account: "Go2pay Wallet",
+      source_account: "Antpay Wallet",
       status: "โอน USDT",
       target_account: String(merchant.name || merchant.company_name || item.merchant_name || ""),
       amount_thb: Number(item.amount || 0),
