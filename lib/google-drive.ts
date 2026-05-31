@@ -31,6 +31,21 @@ export type UploadResult = {
   created_time: string;
 };
 
+export type ResumableUploadSessionInput = {
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  folderType?: DriveFolderType;
+  parentFolderId?: string;
+};
+
+export type ResumableUploadSession = {
+  upload_url: string;
+  file_name: string;
+  mime_type: string;
+  folder_type: DriveFolderType;
+};
+
 export type GoogleTokenRow = {
   id: string;
   provider: string;
@@ -260,6 +275,46 @@ async function shareWithAnyone(accessToken: string, fileId: string): Promise<voi
   } catch (err) {
     console.warn("[google-drive] failed to add public reader permission:", err);
   }
+}
+
+export async function makeDriveFileReadable(fileId: string): Promise<void> {
+  const { accessToken } = await getValidAccessToken();
+  await shareWithAnyone(accessToken, fileId);
+}
+
+export async function createResumableUploadSession(input: ResumableUploadSessionInput): Promise<ResumableUploadSession> {
+  const { accessToken } = await getValidAccessToken();
+  const folderId = input.parentFolderId || folderIdFor(input.folderType);
+  const metadata: Record<string, unknown> = {
+    name: input.fileName,
+    mimeType: input.mimeType || "application/octet-stream"
+  };
+  if (folderId) metadata.parents = [folderId];
+
+  const res = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,mimeType,size,webViewLink,webContentLink,createdTime",
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json; charset=UTF-8",
+        "x-upload-content-type": input.mimeType || "application/octet-stream",
+        "x-upload-content-length": String(input.fileSize)
+      },
+      body: JSON.stringify(metadata)
+    }
+  );
+  const uploadUrl = res.headers.get("location");
+  if (!res.ok || !uploadUrl) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Google Drive resumable session failed (HTTP ${res.status})`);
+  }
+  return {
+    upload_url: uploadUrl,
+    file_name: input.fileName,
+    mime_type: input.mimeType || "application/octet-stream",
+    folder_type: input.folderType || "statement"
+  };
 }
 
 export async function uploadToGoogleDrive(input: UploadInput): Promise<UploadResult> {

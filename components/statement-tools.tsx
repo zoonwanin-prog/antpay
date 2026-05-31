@@ -64,6 +64,8 @@ type SearchMeta = {
   summary?: BulkSummary;
 };
 
+const DIRECT_DRIVE_UPLOAD_THRESHOLD = 4 * 1024 * 1024;
+
 function text(row: Row, key: string) {
   const value = row[key];
   if (value === null || value === undefined || value === "") return "-";
@@ -389,6 +391,11 @@ export function StatementTools({ month, mode = "all" }: { month: string; mode?: 
 }
 
 function uploadWithProgress(data: FormData, onProgress: (percent: number, label: string) => void): Promise<Record<string, any>> {
+  const file = data.get("file");
+  if (file instanceof File && file.size > DIRECT_DRIVE_UPLOAD_THRESHOLD) {
+    return uploadDirectToDrive(data, file, onProgress);
+  }
+
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/statement-tools/upload");
@@ -427,6 +434,90 @@ function uploadWithProgress(data: FormData, onProgress: (percent: number, label:
     xhr.timeout = 10 * 60 * 1000;
     xhr.send(data);
   });
+}
+
+async function uploadDirectToDrive(
+  data: FormData,
+  file: File,
+  onProgress: (percent: number, label: string) => void
+): Promise<Record<string, any>> {
+  onProgress(4, "เตรียมอัปโหลดไฟล์ใหญ่");
+  const sessionRes = await fetch("/api/statement-tools/upload-session", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      type: String(data.get("type") || "statement"),
+      file_name: file.name,
+      file_size: file.size,
+      mime_type: file.type || "text/csv"
+    })
+  });
+  const session = await readJsonResponse(sessionRes, "สร้าง upload session ไม่สำเร็จ");
+  if (!session.success) throw new Error(session.message || "สร้าง upload session ไม่สำเร็จ");
+
+  const driveFile = await putFileToDrive(session.upload_url, file, (loaded, total) => {
+    const percent = total > 0 ? 8 + Math.round((loaded / total) * 68) : 16;
+    onProgress(Math.min(76, percent), "อัปโหลดไฟล์ใหญ่เข้า Google Drive");
+  });
+
+  onProgress(84, "ดาวน์โหลดจาก Drive และ import เข้า Supabase");
+  const importRes = await fetch("/api/statement-tools/import-drive", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      type: String(data.get("type") || "statement"),
+      uploaded_by: String(data.get("uploaded_by") || "admin"),
+      account_id: String(data.get("account_id") || ""),
+      bank: String(data.get("bank") || ""),
+      payout_source_account_id: String(data.get("payout_source_account_id") || ""),
+      drive_file_id: String(driveFile.id || driveFile.drive_file_id || ""),
+      file_name: String(driveFile.name || file.name),
+      web_view_link: String(driveFile.webViewLink || driveFile.web_view_link || "")
+    })
+  });
+  const result = await readJsonResponse(importRes, "Import ไฟล์จาก Drive ไม่สำเร็จ");
+  onProgress(100, "เสร็จสมบูรณ์");
+  return result;
+}
+
+function putFileToDrive(
+  uploadUrl: string,
+  file: File,
+  onUploadProgress: (loaded: number, total: number) => void
+): Promise<Record<string, any>> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl);
+    xhr.setRequestHeader("content-type", file.type || "text/csv");
+    xhr.upload.onprogress = (event) => onUploadProgress(event.loaded, event.lengthComputable ? event.total : file.size);
+    xhr.onload = () => {
+      let json: Record<string, any> = {};
+      try {
+        json = JSON.parse(xhr.responseText || "{}");
+      } catch {
+        reject(new Error(`Google Drive ตอบกลับไม่ถูกต้อง (HTTP ${xhr.status})`));
+        return;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(json);
+      else reject(new Error(String((json.error as { message?: string } | undefined)?.message || `Google Drive upload failed (HTTP ${xhr.status})`)));
+    };
+    xhr.onerror = () => reject(new Error("เชื่อมต่อ Google Drive ไม่สำเร็จ"));
+    xhr.ontimeout = () => reject(new Error("อัปโหลด Google Drive ใช้เวลานานเกินไป"));
+    xhr.timeout = 10 * 60 * 1000;
+    xhr.send(file);
+  });
+}
+
+async function readJsonResponse(res: Response, fallback: string): Promise<Record<string, any>> {
+  const text = await res.text();
+  let json: Record<string, any> = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`${fallback} (HTTP ${res.status}${text ? `: ${text.replace(/\s+/g, " ").trim().slice(0, 180)}` : ""})`);
+  }
+  if (!res.ok) throw new Error(String(json.message || `${fallback} (HTTP ${res.status})`));
+  return json;
 }
 
 function UploadProgressBar({ progress }: { progress: UploadProgress }) {
