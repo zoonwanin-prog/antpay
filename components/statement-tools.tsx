@@ -64,7 +64,8 @@ type SearchMeta = {
   summary?: BulkSummary;
 };
 
-const DIRECT_DRIVE_UPLOAD_THRESHOLD = 4 * 1024 * 1024;
+const DIRECT_DRIVE_UPLOAD_THRESHOLD = 4.4 * 1024 * 1024;
+const SERVER_UPLOAD_CHUNK_SIZE = 3.5 * 1024 * 1024;
 
 function text(row: Row, key: string) {
   const value = row[key];
@@ -454,6 +455,9 @@ async function uploadDirectToDrive(
   });
   const session = await readJsonResponse(sessionRes, "สร้าง upload session ไม่สำเร็จ");
   if (!session.success) throw new Error(session.message || "สร้าง upload session ไม่สำเร็จ");
+  if (!String(session.upload_url || "").startsWith("https://")) {
+    throw new Error("Google Drive upload session ไม่ถูกต้อง");
+  }
 
   const driveFile = await putFileToDrive(session.upload_url, file, (loaded, total) => {
     const percent = total > 0 ? 8 + Math.round((loaded / total) * 68) : 16;
@@ -485,27 +489,36 @@ function putFileToDrive(
   file: File,
   onUploadProgress: (loaded: number, total: number) => void
 ): Promise<Record<string, any>> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", uploadUrl);
-    xhr.setRequestHeader("content-type", file.type || "text/csv");
-    xhr.upload.onprogress = (event) => onUploadProgress(event.loaded, event.lengthComputable ? event.total : file.size);
-    xhr.onload = () => {
-      let json: Record<string, any> = {};
-      try {
-        json = JSON.parse(xhr.responseText || "{}");
-      } catch {
-        reject(new Error(`Google Drive ตอบกลับไม่ถูกต้อง (HTTP ${xhr.status})`));
-        return;
-      }
-      if (xhr.status >= 200 && xhr.status < 300) resolve(json);
-      else reject(new Error(String((json.error as { message?: string } | undefined)?.message || `Google Drive upload failed (HTTP ${xhr.status})`)));
-    };
-    xhr.onerror = () => reject(new Error("เชื่อมต่อ Google Drive ไม่สำเร็จ"));
-    xhr.ontimeout = () => reject(new Error("อัปโหลด Google Drive ใช้เวลานานเกินไป"));
-    xhr.timeout = 10 * 60 * 1000;
-    xhr.send(file);
-  });
+  return uploadFileChunksViaServer(uploadUrl, file, onUploadProgress);
+}
+
+async function uploadFileChunksViaServer(
+  uploadUrl: string,
+  file: File,
+  onUploadProgress: (loaded: number, total: number) => void
+): Promise<Record<string, any>> {
+  let offset = 0;
+  while (offset < file.size) {
+    const endExclusive = Math.min(offset + SERVER_UPLOAD_CHUNK_SIZE, file.size);
+    const chunk = file.slice(offset, endExclusive);
+    const res = await fetch("/api/statement-tools/upload-chunk", {
+      method: "POST",
+      headers: {
+        "content-type": file.type || "text/csv",
+        "x-upload-url": encodeURIComponent(uploadUrl),
+        "x-chunk-start": String(offset),
+        "x-chunk-end": String(endExclusive - 1),
+        "x-file-size": String(file.size),
+        "x-file-type": file.type || "text/csv"
+      },
+      body: chunk
+    });
+    const json = await readJsonResponse(res, "อัปโหลด chunk เข้า Google Drive ไม่สำเร็จ");
+    offset = endExclusive;
+    onUploadProgress(offset, file.size);
+    if (json.done) return (json.file as Record<string, any>) || json;
+  }
+  throw new Error("Google Drive upload ไม่สมบูรณ์");
 }
 
 async function readJsonResponse(res: Response, fallback: string): Promise<Record<string, any>> {
