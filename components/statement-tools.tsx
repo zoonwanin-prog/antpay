@@ -411,7 +411,8 @@ function uploadWithProgress(data: FormData, onProgress: (percent: number, label:
       try {
         json = JSON.parse(xhr.responseText || "{}");
       } catch {
-        reject(new Error("อ่านผลลัพธ์จาก server ไม่สำเร็จ"));
+        const text = xhr.responseText.replace(/\s+/g, " ").trim().slice(0, 180);
+        reject(new Error(`อ่านผลลัพธ์จาก server ไม่สำเร็จ (HTTP ${xhr.status || "unknown"}${text ? `: ${text}` : ""})`));
         return;
       }
       if (xhr.status >= 200 && xhr.status < 300) {

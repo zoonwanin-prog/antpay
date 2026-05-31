@@ -10,6 +10,7 @@ import {
 } from "@/lib/statement-import";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 const DEFAULT_MAX_FILE_SIZE = 20 * 1024 * 1024;
 
