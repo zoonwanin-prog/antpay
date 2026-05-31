@@ -73,6 +73,25 @@ function text(row: Row, key: string) {
   return String(value);
 }
 
+function rawText(row: Row, key: string) {
+  const value = row[key];
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+function isFailedPayoutStatus(status: unknown) {
+  return /fail|failed|reject|rejected|cancel|cancelled|error|unsuccess|ไม่สำเร็จ/i.test(String(status || ""));
+}
+
+function payoutStatusMeta(status: unknown) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "success") return { label: "โอนสำเร็จ", tone: "success" };
+  if (normalized === "failed") return { label: "โอนไม่สำเร็จ", tone: "failed" };
+  if (normalized === "pending") return { label: "รอดำเนินการ", tone: "pending" };
+  if (normalized === "draft") return { label: "ฉบับร่าง", tone: "draft" };
+  return { label: status ? String(status) : "-", tone: "unknown" };
+}
+
 export function StatementTools({ month, mode = "all" }: { month: string; mode?: StatementToolsMode }) {
   const [uploadMessage, setUploadMessage] = useState("");
   const [uploading, setUploading] = useState("");
@@ -639,8 +658,8 @@ function BulkSummary({ meta }: { meta: SearchMeta | null }) {
   if (!summary) return null;
   return (
     <div className="bulk-summary-row">
-      <span>รอดำเนินการ: <strong>{summary.pending_count} รายการ</strong></span>
-      <span>ยอดรอโอนรวม: <strong className="is-red">{summary.pending_amount}</strong></span>
+      <span>โอนไม่สำเร็จ: <strong>{summary.pending_count} รายการ</strong></span>
+      <span>ยอดที่ต้องตรวจ/โอนตาม: <strong className="is-red">{summary.pending_amount}</strong></span>
       <span>โอนตามแล้ว: <strong className="is-green">{summary.paid_count} รายการ / {summary.paid_amount}</strong></span>
       <span>ค้างโอนตาม: <strong className="is-red">{summary.followup_pending_count} รายการ / {summary.followup_pending_amount}</strong></span>
       <span>ยอดรวมทั้งหมด: <strong>{summary.total_amount}</strong></span>
@@ -722,7 +741,8 @@ function ResultTable({
             <th>ประเภท</th>
             <th className="num">ยอดเงิน</th>
             <th className="num">Fee</th>
-            <th>Follow up</th>
+            <th>สถานะ Bulk</th>
+            <th>สถานะโอนตาม</th>
             <th>เหตุผล</th>
           </tr>
         </thead>
@@ -730,8 +750,13 @@ function ResultTable({
           {rows.map((row, index) => {
             const itemId = String(row.payout_item_id || row.id || `${type}-${index}`);
             const isPaid = Boolean(row.followup_paid);
+            const isFailed = isFailedPayoutStatus(row.status);
+            const status = payoutStatusMeta(row.status);
+            const rowClass = isFailed
+              ? isPaid ? "is-followup-paid" : "is-followup-pending"
+              : status.tone === "success" ? "is-payout-success" : "";
             return (
-              <tr key={itemId} className={isPaid ? "is-followup-paid" : "is-followup-pending"}>
+              <tr key={itemId} className={rowClass}>
                 <td>{formatDisplayDate(text(row, "date"))}</td>
                 <td>{text(row, "row_no")}</td>
                 <td>{text(row, "recipient_name")}</td>
@@ -741,14 +766,23 @@ function ResultTable({
                 <td className="num">{text(row, "amount_text")}</td>
                 <td className="num">{text(row, "fee_text")}</td>
                 <td>
-                  <span className={`followup-pill ${isPaid ? "is-paid" : "is-pending"}`}>{isPaid ? "โอนตามแล้ว" : "ค้างโอนตาม"}</span>
-                  {onFollowup ? (
+                  <span className={`payout-status-pill is-${status.tone}`}>{status.label}</span>
+                </td>
+                <td>
+                  {isFailed ? (
+                    <span className={`followup-pill ${isPaid ? "is-paid" : "is-pending"}`}>
+                      {isPaid ? "โอนตามแล้ว" : "ค้างโอนตาม"}
+                    </span>
+                  ) : (
+                    <span className="followup-pill is-neutral">ไม่ต้องโอนตาม</span>
+                  )}
+                  {isFailed && onFollowup ? (
                     <button type="button" className="followup-action" disabled={updatingFollowup === itemId} onClick={() => onFollowup(row, !isPaid)}>
                       {isPaid ? "กลับเป็นค้างโอน" : "โอนตามแล้ว"}
                     </button>
                   ) : null}
                 </td>
-                <td className="statement-description">{text(row, "rejection_reason")}</td>
+                <td className="statement-description">{rawText(row, "rejection_reason") || "-"}</td>
               </tr>
             );
           })}
